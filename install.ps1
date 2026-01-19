@@ -344,6 +344,18 @@ if (-not $cloneSuccess) {
     $zipUrl = "https://github.com/routaran/pickleball_scheduler/archive/refs/heads/master.zip"
     $zipPath = "$env:TEMP\pickleball_scheduler.zip"
     $extractPath = "$env:TEMP\pickleball_extract"
+    
+    # Fetch the latest commit SHA from GitHub API for VERSION file
+    $latestSha = $null
+    try {
+        $apiUrl = "https://api.github.com/repos/routaran/pickleball_scheduler/commits/master"
+        $response = Invoke-RestMethod -Uri $apiUrl -UseBasicParsing
+        $latestSha = $response.sha
+        Write-ColorOutput "  Fetched version info: $($latestSha.Substring(0, 7))" "Gray"
+    }
+    catch {
+        Write-ColorOutput "  Could not fetch version info (non-critical)" "Yellow"
+    }
 
     try {
         Invoke-WebRequest -Uri $zipUrl -OutFile $zipPath -UseBasicParsing
@@ -373,6 +385,12 @@ if (-not $cloneSuccess) {
         # Cleanup
         Remove-Item -Path $zipPath -Force
         Remove-Item -Path $extractPath -Recurse -Force
+
+        # Create VERSION file with commit SHA for update checking
+        if ($latestSha) {
+            $latestSha | Out-File -FilePath "$InstallPath\VERSION" -Encoding ascii -NoNewline
+            Write-ColorOutput "  VERSION file created for update tracking" "Green"
+        }
 
         Write-ColorOutput "  Download and extraction complete" "Green"
     }
@@ -501,7 +519,10 @@ if ($script:UsingEmbeddedPython) {
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
-:: Check for updates if git is available and this is a git repo
+set PYTHON_EXE="%~dp0bin\python\python.exe"
+set UPDATE_APPLIED=0
+
+:: Check for updates - Git method (if available) or Python method (ZIP installs)
 where git >nul 2>nul
 if !errorlevel!==0 (
     if exist ".git" (
@@ -514,12 +535,36 @@ if !errorlevel!==0 (
                 git pull origin master
                 echo Update complete.
                 echo.
+                set UPDATE_APPLIED=1
             )
+        )
+        goto :run_app
+    )
+)
+
+:: No git repo - try Python-based update for ZIP installs
+if exist "VERSION" (
+    %PYTHON_EXE% -m src.updater
+    if !errorlevel!==10 (
+        echo Applying update...
+        if exist "%TEMP%\dupr_update\files" (
+            xcopy /E /Y /Q "%TEMP%\dupr_update\files\*" "%~dp0" >nul
+            rd /S /Q "%TEMP%\dupr_update" 2>nul
+            echo Update complete.
+            echo.
+            set UPDATE_APPLIED=1
         )
     )
 )
 
-"%~dp0bin\python\python.exe" -m src.main %*
+:run_app
+:: Install/update dependencies if update was applied
+if !UPDATE_APPLIED!==1 (
+    echo Checking dependencies...
+    %PYTHON_EXE% -m pip install -r requirements.txt --quiet 2>nul
+)
+
+%PYTHON_EXE% -m src.main %*
 if errorlevel 1 pause
 "@
 }
@@ -530,7 +575,9 @@ else {
 setlocal enabledelayedexpansion
 cd /d "%~dp0"
 
-:: Check for updates if git is available and this is a git repo
+set UPDATE_APPLIED=0
+
+:: Check for updates - Git method (if available) or Python method (ZIP installs)
 where git >nul 2>nul
 if !errorlevel!==0 (
     if exist ".git" (
@@ -543,12 +590,40 @@ if !errorlevel!==0 (
                 git pull origin master
                 echo Update complete.
                 echo.
+                set UPDATE_APPLIED=1
             )
         )
+        goto :run_app
     )
 )
 
+:: No git repo - try Python-based update for ZIP installs
+if exist "VERSION" (
+    call .venv\Scripts\activate.bat
+    python -m src.updater
+    if !errorlevel!==10 (
+        echo Applying update...
+        if exist "%TEMP%\dupr_update\files" (
+            xcopy /E /Y /Q "%TEMP%\dupr_update\files\*" "%~dp0" >nul
+            rd /S /Q "%TEMP%\dupr_update" 2>nul
+            echo Update complete.
+            echo.
+            set UPDATE_APPLIED=1
+        )
+    )
+    goto :after_activate
+)
+
+:run_app
 call .venv\Scripts\activate.bat
+
+:after_activate
+:: Install/update dependencies if update was applied
+if !UPDATE_APPLIED!==1 (
+    echo Checking dependencies...
+    pip install -r requirements.txt --quiet 2>nul
+)
+
 python -m src.main %*
 if errorlevel 1 pause
 "@
