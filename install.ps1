@@ -498,7 +498,27 @@ if ($script:UsingEmbeddedPython) {
     # %~dp0 expands to the directory containing the batch file
     $launcherContent = @"
 @echo off
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
+
+:: Check for updates if git is available and this is a git repo
+where git >nul 2>nul
+if !errorlevel!==0 (
+    if exist ".git" (
+        echo Checking for updates...
+        git fetch origin master >nul 2>nul
+        for /f %%i in ('git rev-list HEAD..origin/master --count 2^>nul') do set UPDATES=%%i
+        if defined UPDATES (
+            if !UPDATES! gtr 0 (
+                echo Found !UPDATES! update^(s^). Updating...
+                git pull origin master
+                echo Update complete.
+                echo.
+            )
+        )
+    )
+)
+
 "%~dp0bin\python\python.exe" -m src.main %*
 if errorlevel 1 pause
 "@
@@ -507,7 +527,27 @@ else {
     # System/Winget Python: Activate venv first
     $launcherContent = @"
 @echo off
+setlocal enabledelayedexpansion
 cd /d "%~dp0"
+
+:: Check for updates if git is available and this is a git repo
+where git >nul 2>nul
+if !errorlevel!==0 (
+    if exist ".git" (
+        echo Checking for updates...
+        git fetch origin master >nul 2>nul
+        for /f %%i in ('git rev-list HEAD..origin/master --count 2^>nul') do set UPDATES=%%i
+        if defined UPDATES (
+            if !UPDATES! gtr 0 (
+                echo Found !UPDATES! update^(s^). Updating...
+                git pull origin master
+                echo Update complete.
+                echo.
+            )
+        )
+    )
+)
+
 call .venv\Scripts\activate.bat
 python -m src.main %*
 if errorlevel 1 pause
