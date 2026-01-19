@@ -44,6 +44,7 @@ htmlcov/
 config/dupr_token.txt
 config/userInfo.json
 config/userInfo.json.old
+config/player_overrides.json
 
 # Generated output
 output/*.html
