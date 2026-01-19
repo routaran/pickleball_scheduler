@@ -2,6 +2,7 @@
 
 import argparse
 import sys
+import webbrowser
 from pathlib import Path
 from typing import List
 
@@ -80,6 +81,7 @@ def process_dupr_ladder(
 
     html = generate_dupr_ladder_html(results, output_file)
     print(f"\nOutput written to: {output_file}")
+    webbrowser.open(output_file.as_uri())
 
     resolved = sum(1 for r in results if r.found)
     print(f"Resolution summary: {resolved}/{len(results)} players found")
@@ -132,6 +134,7 @@ def process_partner_dupr(
 
     html = generate_partner_dupr_html(team_results, output_file)
     print(f"\nOutput written to: {output_file}")
+    webbrowser.open(output_file.as_uri())
 
     resolved = sum(1 for name, p in player_cache.items() if p.found)
     print(f"Resolution summary: {resolved}/{total_players} players found")
