@@ -77,18 +77,19 @@ class Config:
 
 def load_config(base_path: Optional[Path] = None) -> Config:
     """Load application configuration from files."""
+    from .auth import ensure_authenticated
+
     if base_path is None:
         base_path = Path(__file__).parent.parent
 
     config_dir = base_path / "config"
 
-    # Load auth token
-    token_file = config_dir / "dupr_token.txt"
-    if not token_file.exists():
-        raise FileNotFoundError(f"Token file not found: {token_file}")
+    # Ensure we have a valid token (will prompt login if needed)
+    token = ensure_authenticated(config_dir)
+    if not token:
+        raise ValueError("DUPR authentication required")
 
-    token = token_file.read_text().strip()
-    debug_log(f"Loaded token from {token_file}")
+    debug_log(f"Loaded token from {config_dir / 'dupr_token.txt'}")
 
     # Load player overrides
     overrides_file = config_dir / "player_overrides.json"
@@ -287,6 +288,69 @@ def save_user_info(user_info: UserInfo, base_path: Optional[Path] = None) -> Non
 
     debug_log(f"Saved user info to {user_info_file}")
 
+    # Also ensure user is in player_overrides.json
+    ensure_user_in_player_overrides(user_info, base_path)
+
+
+def ensure_user_in_player_overrides(user_info: UserInfo, base_path: Optional[Path] = None) -> None:
+    """
+    Ensure the user is in player_overrides.json so they can be found during searches.
+
+    Args:
+        user_info: User's player info
+        base_path: Base path of project (defaults to parent of src/)
+    """
+    if base_path is None:
+        base_path = Path(__file__).parent.parent
+
+    config_dir = base_path / "config"
+    config_dir.mkdir(parents=True, exist_ok=True)
+
+    overrides_file = config_dir / "player_overrides.json"
+
+    # Load existing overrides or create empty structure
+    if overrides_file.exists():
+        try:
+            with open(overrides_file) as f:
+                data = json.load(f)
+        except (json.JSONDecodeError, IOError):
+            data = {"overrides": []}
+    else:
+        data = {"overrides": []}
+
+    overrides = data.get("overrides", [])
+
+    # Check if user already exists (case-insensitive match)
+    user_name_lower = user_info.name.lower().strip()
+    existing_idx = None
+    for idx, override in enumerate(overrides):
+        if override.get("name", "").lower().strip() == user_name_lower:
+            existing_idx = idx
+            break
+
+    # Create the override entry
+    override_entry = {
+        "name": user_info.name,
+        "rating": user_info.rating,
+        "reason": user_info.reason
+    }
+
+    if existing_idx is not None:
+        # Update existing entry
+        overrides[existing_idx] = override_entry
+    else:
+        # Add new entry
+        overrides.append(override_entry)
+
+    data["overrides"] = overrides
+
+    # Write back to file
+    with open(overrides_file, 'w') as f:
+        json.dump(data, f, indent=2)
+        f.write('\n')
+
+    debug_log(f"Ensured user {user_info.name} is in player_overrides.json")
+
 
 def prompt_for_name() -> str:
     """Prompt user for their name with validation."""
@@ -374,7 +438,10 @@ def ensure_user_info(base_path: Optional[Path] = None) -> UserInfo:
         partial = load_user_info_partial(base_path)
         if partial and not partial.missing_fields:
             # Complete config loaded
-            return UserInfo(name=partial.name, rating=partial.rating, reason=partial.reason)
+            user_info = UserInfo(name=partial.name, rating=partial.rating, reason=partial.reason)
+            # Ensure user is in player_overrides.json
+            ensure_user_in_player_overrides(user_info, base_path)
+            return user_info
     except UserInfoError as e:
         # Invalid JSON - warn and prompt for full setup
         print(f"\nWarning: {e}")

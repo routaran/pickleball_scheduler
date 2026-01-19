@@ -7,6 +7,7 @@ from typing import List
 
 from .config import load_config, Config, debug_log, ensure_user_info, UserInfo, UserInfoError
 from .dupr_client import DUPRClient, TokenExpiredError
+from .auth import DUPRAuthenticator
 from .player_search import PlayerSearcher, SearchResult
 from .game_types import (
     GameType,
@@ -31,6 +32,18 @@ from .input_parser import (
     read_players_from_file,
     detect_input_format
 )
+
+
+def handle_token_expired(config: Config) -> None:
+    """Handle token expiration by prompting for re-authentication."""
+    print("Token expired. Opening login window to refresh...")
+    auth = DUPRAuthenticator(config.base_path / "config")
+    auth.clear_token()
+    new_token = auth.get_token_interactive()
+    if new_token:
+        print("Token refreshed! Please run the command again.")
+    else:
+        print("Re-authentication cancelled or failed.")
 
 
 def search_result_to_player(result: SearchResult) -> PlayerWithRating:
@@ -62,7 +75,7 @@ def process_dupr_ladder(
             status = "✓" if result.found else "? (default rating)"
             print(f"    {status} Rating: {result.rating:.3f}")
         except TokenExpiredError:
-            print("ERROR: Auth token expired - manual refresh required", file=sys.stderr)
+            handle_token_expired(config)
             return False
 
     html = generate_dupr_ladder_html(results, output_file)
@@ -102,7 +115,7 @@ def process_partner_dupr(
             status = "✓" if result.found else "? (default rating)"
             print(f"    {status} Rating: {result.rating:.3f}")
         except TokenExpiredError:
-            print("ERROR: Auth token expired - manual refresh required", file=sys.stderr)
+            handle_token_expired(config)
             return False
 
     # Build team results

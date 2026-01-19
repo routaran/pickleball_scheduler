@@ -9,6 +9,7 @@ description = "DUPR rating lookup and matchmaking for pickleball"
 requires-python = ">=3.9"
 dependencies = [
     "requests>=2.28.0",
+    "playwright>=1.40.0",
 ]
 
 [project.optional-dependencies]
