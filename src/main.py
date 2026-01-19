@@ -10,6 +10,7 @@ from .config import load_config, Config, debug_log, ensure_user_info, UserInfo, 
 from .dupr_client import DUPRClient, TokenExpiredError
 from .auth import DUPRAuthenticator
 from .player_search import PlayerSearcher, SearchResult
+from .player_registry import save_registry
 from .game_types import (
     GameType,
     parse_dupr_ladder_players,
@@ -491,6 +492,9 @@ Examples:
         # Interactive mode (no arguments)
         success = run_interactive_mode(config, searcher, base_path)
 
+    # Save any new player registry entries
+    save_registry()
+    
     sys.exit(0 if success else 1)
 
 
