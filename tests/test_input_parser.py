@@ -14,7 +14,8 @@ from src.input_parser import (
     parse_partner_teams_from_list,
     parse_partner_teams_from_formatted_list,
     read_players_from_file,
-    detect_input_format
+    detect_input_format,
+    validate_picklebros_player_count
 )
 from src.game_types import GameType, Team
 
@@ -34,9 +35,15 @@ class TestPromptGameType:
             result = prompt_game_type()
             assert result == GameType.DUPR_LADDER
 
+    def test_selects_picklebros_monday(self):
+        """Test selecting PickleBros Monday (option 3)."""
+        with patch('builtins.input', return_value='3'):
+            result = prompt_game_type()
+            assert result == GameType.PICKLEBROS_MONDAY
+
     def test_reprompts_on_invalid_input(self):
         """Test that invalid input causes re-prompt."""
-        inputs = iter(['invalid', '3', '1'])
+        inputs = iter(['invalid', '4', '1'])
         with patch('builtins.input', side_effect=lambda _: next(inputs)):
             result = prompt_game_type()
             assert result == GameType.PARTNER_DUPR
@@ -235,3 +242,67 @@ class TestDetectInputFormat:
         lines = ['John Doe', 'Jane Smith / Bob Wilson']
         result = detect_input_format(lines)
         assert result == 'formatted_teams'
+
+
+class TestValidatePicklebrosPlayerCount:
+    """Tests for PickleBros Monday player count validation."""
+
+    def test_valid_4_players(self):
+        """4 players should pass validation."""
+        players = [f"Player{i}" for i in range(4)]
+        # Should not raise
+        validate_picklebros_player_count(players)
+
+    def test_valid_8_players(self):
+        """8 players should pass validation."""
+        players = [f"Player{i}" for i in range(8)]
+        validate_picklebros_player_count(players)
+
+    def test_valid_12_players(self):
+        """12 players should pass validation."""
+        players = [f"Player{i}" for i in range(12)]
+        validate_picklebros_player_count(players)
+
+    def test_valid_16_players(self):
+        """16 players should pass validation."""
+        players = [f"Player{i}" for i in range(16)]
+        validate_picklebros_player_count(players)
+
+    def test_invalid_5_players(self):
+        """5 players should raise InputError."""
+        players = [f"Player{i}" for i in range(5)]
+        with pytest.raises(InputError) as exc_info:
+            validate_picklebros_player_count(players)
+        assert "multiple of 4" in str(exc_info.value)
+        assert "add 3 more" in str(exc_info.value)
+
+    def test_invalid_7_players(self):
+        """7 players should raise InputError."""
+        players = [f"Player{i}" for i in range(7)]
+        with pytest.raises(InputError) as exc_info:
+            validate_picklebros_player_count(players)
+        assert "multiple of 4" in str(exc_info.value)
+        assert "add 1 more" in str(exc_info.value)
+
+    def test_invalid_9_players(self):
+        """9 players should raise InputError."""
+        players = [f"Player{i}" for i in range(9)]
+        with pytest.raises(InputError) as exc_info:
+            validate_picklebros_player_count(players)
+        assert "multiple of 4" in str(exc_info.value)
+        assert "remove 1 player" in str(exc_info.value)
+
+    def test_invalid_10_players(self):
+        """10 players should raise InputError."""
+        players = [f"Player{i}" for i in range(10)]
+        with pytest.raises(InputError) as exc_info:
+            validate_picklebros_player_count(players)
+        assert "multiple of 4" in str(exc_info.value)
+        assert "remove 2 player" in str(exc_info.value)
+
+    def test_invalid_1_player(self):
+        """1 player should raise InputError."""
+        players = ["Player1"]
+        with pytest.raises(InputError) as exc_info:
+            validate_picklebros_player_count(players)
+        assert "multiple of 4" in str(exc_info.value)

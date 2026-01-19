@@ -1,5 +1,6 @@
 """HTML output generator using Bootstrap 5 with modern design."""
 
+import math
 from dataclasses import dataclass
 from datetime import datetime
 from typing import List, Optional
@@ -40,6 +41,128 @@ class Pool:
     @property
     def team_count(self) -> int:
         return len(self.teams)
+
+
+@dataclass
+class PlayerPool:
+    """A pool of players for DUPR Ladder format."""
+    name: str  # "A", "B", "C", "D"
+    players: List[PlayerWithRating]
+
+    @property
+    def player_count(self) -> int:
+        return len(self.players)
+
+
+def distribute_players_to_pools(
+    players: List[PlayerWithRating],
+    target_size: int = 5,
+    min_size: int = 4
+) -> List[PlayerPool]:
+    """
+    Distribute players into pools of 4-5 players.
+    Lower pools (lower rated) get extra players first (fill from bottom up).
+    
+    Algorithm:
+    1. Sort players by rating (highest first)
+    2. Calculate number of pools needed
+    3. Distribute players - later pools get extras to avoid byes
+    
+    Args:
+        players: List of players to distribute
+        target_size: Preferred pool size (default 5)
+        min_size: Minimum pool size (default 4)
+    
+    Returns:
+        List of PlayerPool objects (A=highest rated, B, C, D=progressively lower)
+    
+    Examples:
+        18 players → A=4, B=4, C=5, D=5
+        9 players → A=4, B=5
+    """
+    if not players:
+        return []
+    
+    sorted_players = sorted(players, key=lambda p: p.rating, reverse=True)
+    N = len(sorted_players)
+    
+    # Edge case: fewer than min_size
+    if N < min_size:
+        return [PlayerPool(name="A", players=sorted_players)]
+    
+    # Calculate number of pools
+    num_pools = math.ceil(N / target_size)
+    while num_pools > 1 and N < num_pools * min_size:
+        num_pools -= 1
+    
+    # Calculate sizes: later pools (lower rated) get extras
+    base_size = N // num_pools
+    remainder = N % num_pools
+    
+    pools = []
+    player_index = 0
+    
+    for i in range(num_pools):
+        pool_name = chr(65 + i)  # 'A', 'B', 'C', 'D'...
+        
+        # Pools at END (lower rated) get extra players
+        if i >= num_pools - remainder:
+            pool_size = base_size + 1
+        else:
+            pool_size = base_size
+        
+        pool_players = sorted_players[player_index:player_index + pool_size]
+        player_index += pool_size
+        pools.append(PlayerPool(name=pool_name, players=pool_players))
+    
+    return pools
+
+
+def distribute_players_to_picklebros_pools(
+    players: List[PlayerWithRating]
+) -> List[PlayerPool]:
+    """
+    Distribute players into fixed pools of exactly 4 players.
+
+    This is used for PickleBros Monday format where pools are always 4 players.
+    Player count MUST be a multiple of 4 (validated before calling this function).
+
+    Algorithm:
+    1. Sort players by rating (highest first)
+    2. Create N pools where N = len(players) / 4
+    3. Each pool gets exactly 4 players
+
+    Args:
+        players: List of players to distribute (count must be multiple of 4)
+
+    Returns:
+        List of PlayerPool objects (A=highest rated, B, C, D=progressively lower)
+
+    Examples:
+        8 players → A=4, B=4
+        12 players → A=4, B=4, C=4
+        16 players → A=4, B=4, C=4, D=4
+    """
+    if not players:
+        return []
+
+    # Sort players by rating (highest first)
+    sorted_players = sorted(players, key=lambda p: p.rating, reverse=True)
+    N = len(sorted_players)
+
+    # Calculate number of pools (player count should be validated before calling)
+    num_pools = N // 4
+
+    pools = []
+    player_index = 0
+
+    for i in range(num_pools):
+        pool_name = chr(65 + i)  # 'A', 'B', 'C', 'D'...
+        pool_players = sorted_players[player_index:player_index + 4]
+        player_index += 4
+        pools.append(PlayerPool(name=pool_name, players=pool_players))
+
+    return pools
 
 
 def distribute_teams_to_pools(
@@ -828,15 +951,12 @@ def generate_dupr_ladder_html(
     output_path: Optional[Path] = None
 ) -> str:
     """
-    Generate HTML for DUPR Ladder format with two-column tier layout.
-    Players split into ≥3.0 and <3.0 tiers.
+    Generate HTML for DUPR Ladder format with dynamic pool layout.
+    Players distributed into pools of 4-5, named A (highest) through D (lowest).
+    Lower pools get extra players first to avoid byes.
     """
-    # Sort by rating descending
-    sorted_players = sorted(players, key=lambda p: p.rating, reverse=True)
-
-    # Split into tiers
-    high_tier = [p for p in sorted_players if p.rating >= 3.0]
-    low_tier = [p for p in sorted_players if p.rating < 3.0]
+    # Distribute players into pools
+    pools = distribute_players_to_pools(players)
 
     resolved = sum(1 for p in players if p.found)
     unresolved = [p.name for p in players if not p.found]
@@ -854,22 +974,36 @@ def generate_dupr_ladder_html(
 
     html += _resolution_summary(len(players), resolved, unresolved)
 
-    # Determine layout based on tier distribution
-    show_both = len(high_tier) > 0 and len(low_tier) > 0
+    # Determine column class based on number of pools
+    num_pools = len(pools)
+    if num_pools == 1:
+        col_class = "col-12"
+    elif num_pools == 2:
+        col_class = "col-12 col-md-6"
+    elif num_pools == 3:
+        col_class = "col-12 col-md-6 col-lg-4"
+    else:  # 4+ pools - 2x2 grid
+        col_class = "col-12 col-md-6"
 
     html += '<div class="row">'
 
-    if len(high_tier) > 0:
-        col_class = "col-12 col-lg-6" if show_both else "col-12"
+    for pool in pools:
+        # Determine pool header style
+        pool_lower = pool.name.lower()
+        if pool_lower in ['a', 'b', 'c', 'd']:
+            pool_style_class = f"pool-{pool_lower}"
+        else:
+            pool_style_class = "pool-default"
+
         html += f'''
         <div class="{col_class} mb-4">
-            <div class="tier-card">
-                <div class="tier-header tier-high">
-                    <span>Rating 3.0+</span>
-                    <span class="tier-count">({len(high_tier)} players)</span>
+            <div class="pool-card">
+                <div class="pool-header {pool_style_class}">
+                    <span class="pool-name">POOL {pool.name}</span>
+                    <span class="pool-meta">({pool.player_count} players)</span>
                 </div>
         '''
-        for rank, player in enumerate(high_tier, 1):
+        for rank, player in enumerate(pool.players, 1):
             unresolved_class = " unresolved" if not player.found else ""
             html += f'''
                 <div class="ladder-row{unresolved_class}">
@@ -885,17 +1019,73 @@ def generate_dupr_ladder_html(
         </div>
         '''
 
-    if len(low_tier) > 0:
-        col_class = "col-12 col-lg-6" if show_both else "col-12"
+    html += '</div>'
+
+    html += _html_footer()
+
+    if output_path:
+        output_path.write_text(html)
+
+    return html
+
+
+def generate_picklebros_monday_html(
+    players: List[PlayerWithRating],
+    output_path: Optional[Path] = None
+) -> str:
+    """
+    Generate HTML for PickleBros Monday format with fixed 4-player pools.
+    Players distributed into pools of exactly 4, named A (highest) through N (lowest).
+    """
+    # Distribute players into fixed 4-player pools
+    pools = distribute_players_to_picklebros_pools(players)
+
+    resolved = sum(1 for p in players if p.found)
+    unresolved = [p.name for p in players if not p.found]
+
+    html = _html_header("PickleBros Monday", "picklebros")
+
+    # Page header
+    date_str = datetime.now().strftime("%B %d, %Y")
+    html += f'''
+        <div class="mb-4">
+            <h1 class="page-title">PickleBros Monday</h1>
+            <p class="page-subtitle">{date_str} | Fixed 4-Player Pools</p>
+        </div>
+    '''
+
+    html += _resolution_summary(len(players), resolved, unresolved)
+
+    # Determine column class based on number of pools
+    num_pools = len(pools)
+    if num_pools == 1:
+        col_class = "col-12"
+    elif num_pools == 2:
+        col_class = "col-12 col-md-6"
+    elif num_pools == 3:
+        col_class = "col-12 col-md-6 col-lg-4"
+    else:  # 4+ pools - 2x2 grid
+        col_class = "col-12 col-md-6"
+
+    html += '<div class="row">'
+
+    for pool in pools:
+        # Determine pool header style
+        pool_lower = pool.name.lower()
+        if pool_lower in ['a', 'b', 'c', 'd']:
+            pool_style_class = f"pool-{pool_lower}"
+        else:
+            pool_style_class = "pool-default"
+
         html += f'''
         <div class="{col_class} mb-4">
-            <div class="tier-card">
-                <div class="tier-header tier-low">
-                    <span>Rating Below 3.0</span>
-                    <span class="tier-count">({len(low_tier)} players)</span>
+            <div class="pool-card">
+                <div class="pool-header {pool_style_class}">
+                    <span class="pool-name">POOL {pool.name}</span>
+                    <span class="pool-meta">(4 players)</span>
                 </div>
         '''
-        for rank, player in enumerate(low_tier, 1):
+        for rank, player in enumerate(pool.players, 1):
             unresolved_class = " unresolved" if not player.found else ""
             html += f'''
                 <div class="ladder-row{unresolved_class}">

@@ -21,7 +21,8 @@ from .html_generator import (
     PlayerWithRating,
     TeamWithRatings,
     generate_dupr_ladder_html,
-    generate_partner_dupr_html
+    generate_partner_dupr_html,
+    generate_picklebros_monday_html
 )
 from .input_parser import (
     InputError,
@@ -31,7 +32,8 @@ from .input_parser import (
     parse_partner_teams_from_list,
     parse_partner_teams_from_formatted_list,
     read_players_from_file,
-    detect_input_format
+    detect_input_format,
+    validate_picklebros_player_count
 )
 
 
@@ -142,6 +144,37 @@ def process_partner_dupr(
     return True
 
 
+def process_picklebros_monday(
+    config: Config,
+    searcher: PlayerSearcher,
+    players: List[str],
+    output_file: Path
+) -> bool:
+    """Process PickleBros Monday game type (fixed 4-player pools)."""
+    print(f"Processing PickleBros Monday with {len(players)} players")
+
+    results: List[PlayerWithRating] = []
+    for i, name in enumerate(players, 1):
+        print(f"  [{i}/{len(players)}] Looking up: {name}")
+        try:
+            result = searcher.search_player(name)
+            results.append(search_result_to_player(result))
+            status = "✓" if result.found else "? (default rating)"
+            print(f"    {status} Rating: {result.rating:.3f}")
+        except TokenExpiredError:
+            handle_token_expired(config)
+            return False
+
+    html = generate_picklebros_monday_html(results, output_file)
+    print(f"\nOutput written to: {output_file}")
+    webbrowser.open(output_file.as_uri())
+
+    resolved = sum(1 for r in results if r.found)
+    print(f"Resolution summary: {resolved}/{len(results)} players found")
+
+    return True
+
+
 def run_interactive_mode(config: Config, searcher: PlayerSearcher, base_path: Path) -> bool:
     """Run in interactive mode, prompting for input with re-prompt on validation errors."""
     try:
@@ -149,9 +182,12 @@ def run_interactive_mode(config: Config, searcher: PlayerSearcher, base_path: Pa
         game_type = prompt_game_type()
 
         # Determine output file
-        output_file = base_path / "output" / (
-            "dupr_ladder.html" if game_type == GameType.DUPR_LADDER else "partner_dupr.html"
-        )
+        if game_type == GameType.DUPR_LADDER:
+            output_file = base_path / "output" / "dupr_ladder.html"
+        elif game_type == GameType.PICKLEBROS_MONDAY:
+            output_file = base_path / "output" / "picklebros_monday.html"
+        else:
+            output_file = base_path / "output" / "partner_dupr.html"
         output_file.parent.mkdir(parents=True, exist_ok=True)
 
         # Loop until we get valid input
@@ -163,6 +199,18 @@ def run_interactive_mode(config: Config, searcher: PlayerSearcher, base_path: Pa
                 players = parse_ladder_players_from_list(names)
                 print(f"\nProcessing {len(players)} players...")
                 return process_dupr_ladder(config, searcher, players, output_file)
+
+            elif game_type == GameType.PICKLEBROS_MONDAY:
+                players = parse_ladder_players_from_list(names)
+                try:
+                    validate_picklebros_player_count(players)
+                except InputError as e:
+                    print(f"Error: {e}")
+                    print("Please try again.")
+                    continue
+                print(f"\nProcessing {len(players)} players in {len(players) // 4} pools...")
+                return process_picklebros_monday(config, searcher, players, output_file)
+
             else:
                 # Check if input is formatted (Player1 / Player2) or plain names
                 input_format = detect_input_format(names)
@@ -204,6 +252,9 @@ def run_file_mode(
         if game_type_str == "ladder":
             game_type = GameType.DUPR_LADDER
             default_output = base_path / "output" / "dupr_ladder.html"
+        elif game_type_str == "picklebros":
+            game_type = GameType.PICKLEBROS_MONDAY
+            default_output = base_path / "output" / "picklebros_monday.html"
         else:
             game_type = GameType.PARTNER_DUPR
             default_output = base_path / "output" / "partner_dupr.html"
@@ -217,6 +268,10 @@ def run_file_mode(
         if game_type == GameType.DUPR_LADDER:
             players = parse_ladder_players_from_list(lines)
             return process_dupr_ladder(config, searcher, players, output_file)
+        elif game_type == GameType.PICKLEBROS_MONDAY:
+            players = parse_ladder_players_from_list(lines)
+            validate_picklebros_player_count(players)  # Will raise InputError if invalid
+            return process_picklebros_monday(config, searcher, players, output_file)
         else:
             # Partner DUPR expects "Player1 / Player2" format in files
             teams = parse_partner_dupr_teams(file_path)
@@ -232,7 +287,7 @@ def get_player_list_from_stdin(game_type: str) -> List[str]:
     Prompt user to paste player list via stdin.
 
     Args:
-        game_type: Either "partner" or "ladder"
+        game_type: Either "partner", "ladder", or "picklebros"
 
     Returns:
         List of input lines
@@ -242,6 +297,8 @@ def get_player_list_from_stdin(game_type: str) -> List[str]:
     """
     if game_type == "partner":
         print("Paste partner list (format: Player1 / Player2 per line)")
+    elif game_type == "picklebros":
+        print("Paste player list for PickleBros Monday (must be multiple of 4)")
     else:
         print("Paste a player list for the DUPR Ladder")
 
@@ -286,6 +343,9 @@ def run_stdin_mode(
         if game_type_str == "ladder":
             game_type = GameType.DUPR_LADDER
             default_output = base_path / "output" / "dupr_ladder.html"
+        elif game_type_str == "picklebros":
+            game_type = GameType.PICKLEBROS_MONDAY
+            default_output = base_path / "output" / "picklebros_monday.html"
         else:
             game_type = GameType.PARTNER_DUPR
             default_output = base_path / "output" / "partner_dupr.html"
@@ -303,6 +363,16 @@ def run_stdin_mode(
                 return False
             print(f"\nProcessing {len(players)} players...")
             return process_dupr_ladder(config, searcher, players, output_file)
+
+        elif game_type == GameType.PICKLEBROS_MONDAY:
+            players = parse_ladder_players_from_list(lines)
+            if not players:
+                print("ERROR: No players provided.", file=sys.stderr)
+                return False
+            validate_picklebros_player_count(players)
+            print(f"\nProcessing {len(players)} players in {len(players) // 4} pools...")
+            return process_picklebros_monday(config, searcher, players, output_file)
+
         else:
             # Partner DUPR expects "Player1 / Player2" format
             teams = parse_partner_teams_from_formatted_list(lines)
@@ -344,17 +414,19 @@ Examples:
   File mode (backward compatible):
     python -m src.main --file DUPRladder.playerList --type ladder
     python -m src.main --file partnerDUPR.playerList --type partner
+    python -m src.main --file picklebros.playerList --type picklebros
 
   Legacy mode (positional argument):
     python -m src.main ladder
     python -m src.main partner
+    python -m src.main picklebros
 """
     )
     parser.add_argument(
         "game_type",
         nargs="?",
-        choices=["ladder", "partner"],
-        help="Game type: 'ladder' for DUPR Ladder, 'partner' for Partner DUPR"
+        choices=["ladder", "partner", "picklebros"],
+        help="Game type: 'ladder' for DUPR Ladder, 'partner' for Partner DUPR, 'picklebros' for PickleBros Monday"
     )
     parser.add_argument(
         "-f", "--file",
@@ -362,7 +434,7 @@ Examples:
     )
     parser.add_argument(
         "-t", "--type",
-        choices=["ladder", "partner"],
+        choices=["ladder", "partner", "picklebros"],
         help="Game type when using --file (required with --file)"
     )
     parser.add_argument(

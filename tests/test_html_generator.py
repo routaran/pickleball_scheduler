@@ -8,9 +8,13 @@ from src.html_generator import (
     PlayerWithRating,
     TeamWithRatings,
     Pool,
+    PlayerPool,
     generate_dupr_ladder_html,
     generate_partner_dupr_html,
+    generate_picklebros_monday_html,
     distribute_teams_to_pools,
+    distribute_players_to_pools,
+    distribute_players_to_picklebros_pools,
     _get_rating_tier
 )
 
@@ -133,41 +137,35 @@ class TestGenerateDUPRLadderHTML:
         content = output_path.read_text()
         assert "John Doe" in content
 
-    def test_two_tier_layout(self):
-        """Test that the two-tier layout is generated."""
+    def test_pool_layout(self):
+        """Test that the pool-based layout is generated."""
         players = [
             make_player("High Player", 4.0),
             make_player("Low Player", 2.5)
         ]
         html = generate_dupr_ladder_html(players)
 
-        # Check for tier headers
-        assert "Rating 3.0+" in html
-        assert "Rating Below 3.0" in html
+        # Check for pool structure
+        assert "POOL A" in html
+        assert "pool-card" in html
 
-    def test_tier_player_counts(self):
-        """Test that tier headers show player counts."""
-        players = [
-            make_player("High1", 4.0),
-            make_player("High2", 3.5),
-            make_player("Low1", 2.5)
-        ]
+    def test_pool_player_counts(self):
+        """Test that pool headers show player counts."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(8)]
         html = generate_dupr_ladder_html(players)
 
-        assert "(2 players)" in html  # High tier
-        assert "(1 players)" in html  # Low tier
+        # 8 players creates 2 pools of 4
+        assert "(4 players)" in html  # Low tier
 
-    def test_single_tier_full_width(self):
-        """Test that single tier takes full width."""
-        # All players >= 3.0
-        players = [
-            make_player("High1", 4.0),
-            make_player("High2", 3.5)
-        ]
+    def test_single_pool_full_width(self):
+        """Test that single pool uses col-12 full width."""
+        # 4 players creates a single pool
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(4)]
         html = generate_dupr_ladder_html(players)
 
-        assert "Rating 3.0+" in html
-        assert "Rating Below 3.0" not in html
+        assert "POOL A" in html
+        assert "POOL B" not in html
+        assert 'class="col-12 mb-4"' in html
 
     def test_rating_tier_colors(self):
         """Test that rating badges have tier-specific classes."""
@@ -462,6 +460,148 @@ class TestPoolDistribution:
         assert pools[0].team_count == 1
 
 
+class TestPlayerPoolDistribution:
+    """Tests for player pool distribution algorithm (DUPR Ladder)."""
+
+    def make_players(self, count: int) -> list:
+        """Helper to create test players with descending ratings."""
+        players = []
+        for i in range(count):
+            rating = 5.0 - (i * 0.1)  # Descending ratings: 5.0, 4.9, 4.8, ...
+            players.append(make_player(f"Player{i+1}", rating))
+        return players
+
+    def test_18_players_fills_bottom_pools_first(self):
+        """18 players → A=4, B=4, C=5, D=5 (lower pools get extras)."""
+        players = self.make_players(18)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 4
+        assert [p.player_count for p in pools] == [4, 4, 5, 5]
+
+    def test_9_players_bottom_gets_extra(self):
+        """9 players → A=4, B=5 (lower pool gets extra)."""
+        players = self.make_players(9)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 2
+        assert [p.player_count for p in pools] == [4, 5]
+
+    def test_8_players_creates_2_pools_of_4(self):
+        """8 players → A=4, B=4."""
+        players = self.make_players(8)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 2
+        assert all(p.player_count == 4 for p in pools)
+
+    def test_10_players_creates_2_pools_of_5(self):
+        """10 players → A=5, B=5."""
+        players = self.make_players(10)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 2
+        assert all(p.player_count == 5 for p in pools)
+
+    def test_16_players_creates_4_pools_of_4(self):
+        """16 players → A=4, B=4, C=4, D=4."""
+        players = self.make_players(16)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 4
+        assert all(p.player_count == 4 for p in pools)
+
+    def test_20_players_creates_4_pools_of_5(self):
+        """20 players → A=5, B=5, C=5, D=5."""
+        players = self.make_players(20)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 4
+        assert all(p.player_count == 5 for p in pools)
+
+    def test_pool_a_has_highest_ratings(self):
+        """Pool A should contain the highest-rated players."""
+        players = self.make_players(8)
+        pools = distribute_players_to_pools(players)
+
+        pool_a_ratings = [p.rating for p in pools[0].players]
+        pool_b_ratings = [p.rating for p in pools[1].players]
+
+        # Minimum rating in A should be >= maximum in B
+        assert min(pool_a_ratings) >= max(pool_b_ratings)
+
+    def test_pool_names_alphabetical(self):
+        """Pools are named A, B, C, D in order."""
+        players = self.make_players(18)
+        pools = distribute_players_to_pools(players)
+
+        assert [p.name for p in pools] == ['A', 'B', 'C', 'D']
+
+    def test_empty_list(self):
+        """Empty player list returns empty pool list."""
+        pools = distribute_players_to_pools([])
+        assert pools == []
+
+    def test_fewer_than_4_creates_single_pool(self):
+        """Fewer than 4 players creates a single pool."""
+        players = self.make_players(3)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 1
+        assert pools[0].name == "A"
+        assert pools[0].player_count == 3
+
+    def test_single_player(self):
+        """Single player creates a single pool with 1 player."""
+        players = self.make_players(1)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 1
+        assert pools[0].player_count == 1
+
+    def test_4_players_creates_single_pool(self):
+        """4 players → A=4 (single pool, no split needed)."""
+        players = self.make_players(4)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 1
+        assert pools[0].player_count == 4
+
+    def test_5_players_creates_single_pool(self):
+        """5 players → A=5 (single pool, no split needed)."""
+        players = self.make_players(5)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 1
+        assert pools[0].player_count == 5
+
+    def test_6_players_creates_single_pool_of_6(self):
+        """6 players → A=6 (single pool since 2 pools would be 3+3)."""
+        players = self.make_players(6)
+        pools = distribute_players_to_pools(players)
+
+        # With min_size=4, 2 pools of 3 is not valid, so single pool
+        assert len(pools) == 1
+        assert pools[0].player_count == 6
+
+    def test_7_players_creates_single_pool(self):
+        """7 players → A=7 (single pool since 2 pools would have <4)."""
+        players = self.make_players(7)
+        pools = distribute_players_to_pools(players)
+
+        assert len(pools) == 1
+        assert pools[0].player_count == 7
+
+    def test_players_sorted_within_pools(self):
+        """Players within each pool are sorted by rating descending."""
+        players = self.make_players(10)
+        pools = distribute_players_to_pools(players)
+
+        for pool in pools:
+            ratings = [p.rating for p in pool.players]
+            assert ratings == sorted(ratings, reverse=True)
+
+
 class TestHTMLAccessibility:
     """Tests for HTML accessibility features."""
 
@@ -506,14 +646,12 @@ class TestResponsiveDesign:
 
     def test_ladder_uses_responsive_columns(self):
         """Test that ladder uses Bootstrap responsive columns."""
-        players = [
-            make_player("High", 4.0),
-            make_player("Low", 2.5)
-        ]
+        # Create 8 players to generate 2 pools
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(8)]
         html = generate_dupr_ladder_html(players)
 
         assert "col-12" in html
-        assert "col-lg-6" in html
+        assert "col-md-6" in html
 
     def test_partner_uses_responsive_layout(self):
         """Test that partner uses responsive layout."""
@@ -527,3 +665,186 @@ class TestResponsiveDesign:
         # Check for responsive CSS in styles
         assert "@media" in html
         assert "pool-card" in html
+
+
+class TestPicklebrosPoolDistribution:
+    """Tests for PickleBros Monday pool distribution algorithm (fixed 4-player pools)."""
+
+    def make_players(self, count: int) -> list:
+        """Helper to create test players with descending ratings."""
+        players = []
+        for i in range(count):
+            rating = 5.0 - (i * 0.1)  # Descending ratings: 5.0, 4.9, 4.8, ...
+            players.append(make_player(f"Player{i+1}", rating))
+        return players
+
+    def test_8_players_creates_2_pools_of_4(self):
+        """8 players → A=4, B=4."""
+        players = self.make_players(8)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        assert len(pools) == 2
+        assert all(p.player_count == 4 for p in pools)
+
+    def test_12_players_creates_3_pools_of_4(self):
+        """12 players → A=4, B=4, C=4."""
+        players = self.make_players(12)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        assert len(pools) == 3
+        assert all(p.player_count == 4 for p in pools)
+
+    def test_16_players_creates_4_pools_of_4(self):
+        """16 players → A=4, B=4, C=4, D=4."""
+        players = self.make_players(16)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        assert len(pools) == 4
+        assert all(p.player_count == 4 for p in pools)
+
+    def test_4_players_creates_single_pool(self):
+        """4 players → A=4 (single pool)."""
+        players = self.make_players(4)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        assert len(pools) == 1
+        assert pools[0].player_count == 4
+        assert pools[0].name == "A"
+
+    def test_pool_a_has_highest_ratings(self):
+        """Pool A should contain the highest-rated players."""
+        players = self.make_players(8)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        pool_a_ratings = [p.rating for p in pools[0].players]
+        pool_b_ratings = [p.rating for p in pools[1].players]
+
+        # Minimum rating in A should be >= maximum in B
+        assert min(pool_a_ratings) >= max(pool_b_ratings)
+
+    def test_pool_names_alphabetical(self):
+        """Pools are named A, B, C, D in order."""
+        players = self.make_players(16)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        assert [p.name for p in pools] == ['A', 'B', 'C', 'D']
+
+    def test_empty_list(self):
+        """Empty player list returns empty pool list."""
+        pools = distribute_players_to_picklebros_pools([])
+        assert pools == []
+
+    def test_players_sorted_within_pools(self):
+        """Players within each pool are sorted by rating descending."""
+        players = self.make_players(8)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        for pool in pools:
+            ratings = [p.rating for p in pool.players]
+            assert ratings == sorted(ratings, reverse=True)
+
+    def test_20_players_creates_5_pools_of_4(self):
+        """20 players → 5 pools of 4."""
+        players = self.make_players(20)
+        pools = distribute_players_to_picklebros_pools(players)
+
+        assert len(pools) == 5
+        assert all(p.player_count == 4 for p in pools)
+
+
+class TestPicklebrosMondayHTML:
+    """Tests for PickleBros Monday HTML generation."""
+
+    def test_generates_valid_html5(self):
+        """Test that output is valid HTML5."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(4)]
+        html = generate_picklebros_monday_html(players)
+
+        assert "<!DOCTYPE html>" in html
+        assert "<html" in html
+        assert "</html>" in html
+
+    def test_title_is_picklebros_monday(self):
+        """Test that title is PickleBros Monday."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(4)]
+        html = generate_picklebros_monday_html(players)
+
+        assert "PickleBros Monday" in html
+
+    def test_subtitle_mentions_fixed_pools(self):
+        """Test that subtitle mentions fixed 4-player pools."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(4)]
+        html = generate_picklebros_monday_html(players)
+
+        assert "Fixed 4-Player Pools" in html
+
+    def test_pool_size_always_4(self):
+        """Test that pool header shows 4 players."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(8)]
+        html = generate_picklebros_monday_html(players)
+
+        assert "(4 players)" in html
+
+    def test_displays_pool_labels(self):
+        """Test that pool labels are displayed."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(8)]
+        html = generate_picklebros_monday_html(players)
+
+        assert "POOL A" in html
+        assert "POOL B" in html
+
+    def test_writes_to_file(self):
+        """Test that output can be written to file."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(4)]
+
+        with NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
+            output_path = Path(f.name)
+
+        generate_picklebros_monday_html(players, output_path)
+
+        assert output_path.exists()
+        content = output_path.read_text()
+        assert "PickleBros Monday" in content
+
+    def test_includes_profile_links(self):
+        """Test that player profile links are included."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1, found=True) for i in range(4)]
+        html = generate_picklebros_monday_html(players)
+
+        assert 'href="https://dashboard.dupr.com' in html
+
+    def test_shows_resolution_summary(self):
+        """Test that resolution summary is displayed."""
+        players = [
+            make_player("Found1", 4.0, found=True),
+            make_player("Found2", 3.9, found=True),
+            make_player("NotFound", 2.5, found=False),
+            make_player("Found3", 3.7, found=True)
+        ]
+        html = generate_picklebros_monday_html(players)
+
+        assert "3/4" in html  # 3 of 4 resolved
+
+    def test_displays_rank_numbers(self):
+        """Test that ranking numbers are displayed."""
+        players = [make_player(f"Player{i}", 4.0 - i * 0.1) for i in range(4)]
+        html = generate_picklebros_monday_html(players)
+
+        assert ">1<" in html  # rank badge
+
+    def test_players_sorted_by_rating(self):
+        """Test that players are sorted highest to lowest within pools."""
+        players = [
+            make_player("Low", 2.5),
+            make_player("High", 4.5),
+            make_player("Mid", 3.5),
+            make_player("MidHigh", 4.0)
+        ]
+        html = generate_picklebros_monday_html(players)
+
+        # High player should appear before others
+        high_pos = html.find("High")
+        mid_pos = html.find("Mid")
+        low_pos = html.find("Low")
+
+        assert high_pos < mid_pos < low_pos

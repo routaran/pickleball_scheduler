@@ -12,6 +12,7 @@ class GameType(Enum):
     """Supported game types."""
     DUPR_LADDER = "dupr_ladder"
     PARTNER_DUPR = "partner_dupr"
+    PICKLEBROS_MONDAY = "picklebros_monday"
 
 
 @dataclass

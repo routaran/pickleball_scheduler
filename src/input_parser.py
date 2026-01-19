@@ -24,9 +24,10 @@ def prompt_game_type() -> GameType:
         print("\nSelect game type:")
         print("  1. Partner DUPR (fixed teams)")
         print("  2. DUPR Ladder (individual ranking)")
+        print("  3. PickleBros Monday (fixed 4-player pools)")
 
         try:
-            choice = input("Enter choice [1/2]: ").strip()
+            choice = input("Enter choice [1/2/3]: ").strip()
         except EOFError:
             raise InputError("No game type selection provided. Exiting.")
 
@@ -34,8 +35,10 @@ def prompt_game_type() -> GameType:
             return GameType.PARTNER_DUPR
         elif choice == "2":
             return GameType.DUPR_LADDER
+        elif choice == "3":
+            return GameType.PICKLEBROS_MONDAY
         else:
-            print("Invalid choice. Please enter 1 or 2.")
+            print("Invalid choice. Please enter 1, 2, or 3.")
 
 
 def _read_player_list_once() -> List[str]:
@@ -214,3 +217,24 @@ def detect_input_format(lines: List[str]) -> str:
         if "/" in line:
             return "formatted_teams"
     return "plain_names"
+
+
+def validate_picklebros_player_count(players: List[str]) -> None:
+    """
+    Validate that player count is a multiple of 4 for PickleBros Monday.
+
+    Args:
+        players: List of player names
+
+    Raises:
+        InputError: If player count is not a multiple of 4
+    """
+    count = len(players)
+    if count % 4 != 0:
+        remainder = count % 4
+        add_needed = 4 - remainder
+        raise InputError(
+            f"PickleBros Monday requires player count to be a multiple of 4.\n"
+            f"       Found {count} players. Please add {add_needed} more player(s) "
+            f"or remove {remainder} player(s)."
+        )
