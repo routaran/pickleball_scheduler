@@ -15,46 +15,16 @@ A tool for pickleball coordinators to quickly look up DUPR ratings for players a
 
 - **Windows 10 or Windows 11**
 - **A DUPR account** (free at [dupr.com](https://www.dupr.com))
-- **Python 3.9 or higher** (installation instructions below)
+
+That's it! Python is installed automatically by the installer.
 
 ---
 
 ## Installation (Windows)
 
-### Step 1: Install Python (if you don't have it)
+### One-Click Install (Recommended)
 
-If you already have Python installed, skip to Step 2.
-
-#### Option A: Install from Microsoft Store (Easiest - No Admin Required)
-
-1. Click the **Start** button
-2. Type **Microsoft Store** and open it
-3. Search for **Python 3.12**
-4. Click **Get** to install
-5. Wait for installation to complete
-
-#### Option B: Install from python.org
-
-1. Go to [python.org/downloads](https://www.python.org/downloads/)
-2. Click the yellow **Download Python 3.x.x** button
-3. Run the downloaded installer
-4. **IMPORTANT:** Check the box that says **"Add Python to PATH"**
-5. Click **Install Now** (or "Install just for me" if you don't have admin rights)
-
-#### Verify Python is Installed
-
-1. Press `Windows + R` to open the Run dialog
-2. Type `cmd` and press Enter
-3. In the black window that opens, type: `python --version`
-4. You should see something like `Python 3.12.0`
-
-If you see an error, restart your computer and try again.
-
----
-
-### Step 2: Install the DUPR Pickleball Scheduler
-
-#### Quick Install (Recommended)
+**No admin rights required. No prerequisites needed.**
 
 1. **Download the installer:**
    - Go to: [https://github.com/routaran/pickleball_scheduler/releases](https://github.com/routaran/pickleball_scheduler/releases)
@@ -66,28 +36,49 @@ If you see an error, restart your computer and try again.
    - If Windows shows a security warning, click **"More info"** then **"Run anyway"**
 
 3. **Follow the on-screen instructions:**
-   - The installer will download and set up everything automatically
-   - A browser window will NOT open during installation
+   - The installer automatically handles Python installation:
+     - First tries **Windows Package Manager (winget)** if available
+     - Falls back to **embedded Python** (portable, self-contained)
    - When complete, you'll see "Installation Complete!"
 
 4. **You're done!**
    - A shortcut called **"DUPR Pickleball Scheduler"** will appear on your Desktop
+   - If embedded Python was used, the installation is **fully portable** - you can move the folder anywhere
 
-#### Alternative: Manual Installation
+### Alternative: Manual Installation
 
-If the quick install doesn't work, you can install manually:
+For advanced users or if automatic installation fails:
+
+<details>
+<summary>Click to expand manual installation steps</summary>
+
+#### Step 1: Install Python
+
+If the automatic installer couldn't install Python, install it manually:
+
+**Option A: Microsoft Store (Easiest)**
+1. Open **Microsoft Store**
+2. Search for **Python 3.12**
+3. Click **Get** to install
+
+**Option B: python.org**
+1. Go to [python.org/downloads](https://www.python.org/downloads/)
+2. Download Python 3.12
+3. Run installer, check **"Add Python to PATH"**
+4. Select **"Install just for me"** (no admin required)
+
+#### Step 2: Install the Application
 
 1. **Download the code:**
    - Go to [https://github.com/routaran/pickleball_scheduler](https://github.com/routaran/pickleball_scheduler)
-   - Click the green **Code** button
-   - Click **Download ZIP**
-   - Extract the ZIP file to a folder (e.g., `C:\Users\YourName\PickleballScheduler`)
+   - Click the green **Code** button > **Download ZIP**
+   - Extract to a folder (e.g., `C:\Users\YourName\PickleballScheduler`)
 
 2. **Open Command Prompt in that folder:**
    - Open the extracted folder in File Explorer
    - Click in the address bar, type `cmd`, and press Enter
 
-3. **Run these commands one at a time:**
+3. **Run these commands:**
    ```
    python -m venv .venv
    .venv\Scripts\activate
@@ -96,10 +87,11 @@ If the quick install doesn't work, you can install manually:
    ```
 
 4. **Create a shortcut:**
-   - Right-click on your Desktop
-   - Select **New > Shortcut**
-   - For the location, enter: `cmd /k "cd /d C:\Users\YourName\PickleballScheduler && .venv\Scripts\activate && python -m src.main"`
-   - Name it "DUPR Pickleball Scheduler"
+   - Right-click Desktop > **New > Shortcut**
+   - Location: `cmd /k "cd /d C:\Users\YourName\PickleballScheduler && .venv\Scripts\activate && python -m src.main"`
+   - Name: "DUPR Pickleball Scheduler"
+
+</details>
 
 ---
 
@@ -134,10 +126,11 @@ For detailed usage instructions, see the **[How-To Guide](How-To.md)**.
 
 ## Troubleshooting
 
-### "Python is not recognized"
-- Make sure you checked "Add Python to PATH" during installation
+### "Python is not recognized" (Manual installation only)
+- This only applies if you installed manually
+- Make sure you checked "Add Python to PATH" during Python installation
 - Restart your computer and try again
-- Reinstall Python using the instructions above
+- The automatic installer avoids this issue entirely
 
 ### "Browser won't open for login"
 - Make sure you have an internet connection
@@ -167,7 +160,11 @@ To remove the application:
    - Default location: `C:\Users\YourName\PickleballScheduler`
 2. Delete the Desktop shortcut
 
-That's it! No registry entries or system files to clean up.
+That's it! The installation is fully self-contained:
+- No registry entries to clean up
+- No system files modified
+- If Python was installed via the embedded option, it's inside the application folder and gets deleted too
+- If Python was installed via winget, it remains on your system (useful for other apps)
 
 ---
 

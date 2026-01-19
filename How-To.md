@@ -44,6 +44,13 @@ dupr-lookup.bat ladder
 dupr-lookup.bat partner
 ```
 
+### Portable Installation Note
+
+If your installation used **embedded Python** (shown during install as "Self-contained"), the entire folder is **portable**:
+- You can move the `PickleballScheduler` folder anywhere (USB drive, different folder, etc.)
+- The application will continue to work from the new location
+- No reinstallation needed after moving
+
 ---
 
 ## Logging In to DUPR
@@ -356,7 +363,36 @@ Save the file and run the application again. The override ratings will be used i
 
 ## Command Line Options
 
-For advanced users:
+For advanced users, you can run the application directly from the command line.
+
+### Using the Launcher (Recommended)
+
+The simplest way is to use the batch file with arguments:
+```
+dupr-lookup.bat ladder
+dupr-lookup.bat partner
+```
+
+### Direct Python Invocation
+
+If you need more control, you can invoke Python directly. The command differs based on your installation type:
+
+**Embedded Python installation:**
+```
+bin\python\python.exe -m src.main
+bin\python\python.exe -m src.main ladder
+bin\python\python.exe -m src.main --file players.txt --type ladder
+```
+
+**System Python installation (with .venv):**
+```
+.venv\Scripts\activate
+python -m src.main
+python -m src.main ladder
+python -m src.main --file players.txt --type ladder
+```
+
+### Available Options
 
 ```
 # Interactive mode (prompts for everything)

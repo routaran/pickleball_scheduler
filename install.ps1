@@ -412,18 +412,8 @@ if ($script:UsingEmbeddedPython) {
     Write-ColorOutput "`nInstalling browser for authentication..." "Yellow"
     Write-ColorOutput "  (This may take a few minutes on first install)" "White"
 
-    # Get the Scripts path for embedded Python
-    $embeddedScriptsPath = Split-Path $script:PythonExecutable -Parent
-    $embeddedScriptsPath = "$embeddedScriptsPath\Scripts"
-    $playwrightExe = "$embeddedScriptsPath\playwright.exe"
-
-    if (Test-Path $playwrightExe) {
-        & $playwrightExe install chromium
-    }
-    else {
-        # Fallback: use python -m playwright
-        & $script:PythonExecutable -m playwright install chromium
-    }
+    # Use module invocation - works regardless of PATH configuration
+    & $script:PythonExecutable -m playwright install chromium
 
     if ($LASTEXITCODE -ne 0) {
         Write-ColorOutput "  Failed to install browser" "Red"
