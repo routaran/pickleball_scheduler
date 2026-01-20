@@ -430,13 +430,13 @@ if ($script:UsingEmbeddedPython) {
     Write-ColorOutput "`nInstalling dependencies into embedded Python..." "Yellow"
 
     # Upgrade pip first
-    & $script:PythonExecutable -m pip install --upgrade pip setuptools wheel --quiet 2>&1 | Out-Null
+    & $script:PythonExecutable -m pip install --upgrade pip setuptools wheel --no-warn-script-location --quiet 2>&1 | Out-Null
     if ($LASTEXITCODE -ne 0) {
         Write-ColorOutput "  Warning: Could not upgrade pip" "Yellow"
     }
 
     # Install the application and its dependencies directly
-    & $script:PythonExecutable -m pip install -e . --quiet
+    & $script:PythonExecutable -m pip install -e . --no-warn-script-location --quiet
     if ($LASTEXITCODE -ne 0) {
         Write-ColorOutput "  Failed to install dependencies" "Red"
         Set-Location $originalLocation
@@ -490,12 +490,12 @@ else {
 
     # Install dependencies
     Write-ColorOutput "`nInstalling dependencies (this may take a moment)..." "Yellow"
-    python -m pip install --upgrade pip setuptools wheel --quiet
+    python -m pip install --upgrade pip setuptools wheel --no-warn-script-location --quiet
     if ($LASTEXITCODE -ne 0) {
         Write-ColorOutput "  Warning: Could not upgrade pip" "Yellow"
     }
 
-    pip install -e . --quiet
+    pip install -e .  --no-warn-script-location --quiet
     if ($LASTEXITCODE -ne 0) {
         Write-ColorOutput "  Failed to install dependencies" "Red"
         Set-Location $originalLocation
