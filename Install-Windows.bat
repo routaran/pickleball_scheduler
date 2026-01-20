@@ -30,11 +30,7 @@ if exist "%~dp0install.ps1" (
 ) else (
     :: Download and run installer from GitHub
     echo Downloading installer from GitHub...
-    powershell -ExecutionPolicy Bypass -Command ^
-        "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; ^
-        $installScript = '%TEMP%\install_pickleball.ps1'; ^
-        Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/routaran/pickleball_scheduler/master/install.ps1' -OutFile $installScript -UseBasicParsing; ^
-        & $installScript"
+    powershell -ExecutionPolicy Bypass -Command "[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12; $installScript = '%TEMP%\install_pickleball.ps1'; Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/routaran/pickleball_scheduler/master/install.ps1' -OutFile $installScript -UseBasicParsing; & $installScript"
     if errorlevel 1 (
         echo.
         echo ERROR: Installation failed.
