@@ -6,7 +6,18 @@ param(
     [string]$InstallPath = "$env:USERPROFILE\PickleballScheduler"
 )
 
-$ErrorActionPreference = "Continue"
+# --- ADDED: Global Error Trap ---
+# This ensures the window stays open if an unexpected crash occurs
+trap {
+    Write-Host "`nCRITICAL ERROR: The installation script encountered an unexpected problem." -ForegroundColor Red
+    Write-Host "Error Details: $_" -ForegroundColor Red
+    Write-Host "Script Line: $($_.InvocationInfo.ScriptLineNumber)" -ForegroundColor Red
+    Read-Host "`nPress Enter to exit"
+    exit 1
+}
+# --------------------------------
+
+$ErrorActionPreference = "Stop" # RECOMMENDED: Change from "Continue" to "Stop" so the trap catches everything
 
 # Enforce TLS 1.2 for web requests (required for GitHub)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
