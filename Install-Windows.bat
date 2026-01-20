@@ -21,6 +21,12 @@ if errorlevel 1 (
 if exist "%~dp0install.ps1" (
     echo Running local installer...
     powershell -ExecutionPolicy Bypass -File "%~dp0install.ps1"
+    if errorlevel 1 (
+        echo.
+        echo ERROR: Installation failed.
+        pause
+        exit /b 1
+    )
 ) else (
     :: Download and run installer from GitHub
     echo Downloading installer from GitHub...
@@ -29,4 +35,10 @@ if exist "%~dp0install.ps1" (
         $installScript = '%TEMP%\install_pickleball.ps1'; ^
         Invoke-WebRequest -Uri 'https://raw.githubusercontent.com/routaran/pickleball_scheduler/master/install.ps1' -OutFile $installScript -UseBasicParsing; ^
         & $installScript"
+    if errorlevel 1 (
+        echo.
+        echo ERROR: Installation failed.
+        pause
+        exit /b 1
+    )
 )
