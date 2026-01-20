@@ -19,6 +19,14 @@ trap {
 
 $ErrorActionPreference = "Stop" # RECOMMENDED: Change from "Continue" to "Stop" so the trap catches everything
 
+# Ensure the window stays open if an unhandled error crashes the script
+trap {
+    Write-Host "`nAn unexpected error occurred: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "Script execution cannot continue." -ForegroundColor Red
+    Read-Host "`nPress Enter to exit"
+    exit 1
+}
+
 # Enforce TLS 1.2 for web requests (required for GitHub)
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 
