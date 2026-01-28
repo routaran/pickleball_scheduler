@@ -17,6 +17,7 @@ dev = [
     "pytest>=7.0.0",
     "pytest-playwright>=0.4.0",
     "playwright>=1.40.0",
+    "rapidfuzz>=3.0.0",
 ]
 
 [project.scripts]
