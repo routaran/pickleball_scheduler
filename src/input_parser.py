@@ -51,7 +51,7 @@ def _read_player_list_once() -> List[str]:
     Raises:
         EOFError: If input is terminated (Ctrl+D/Ctrl+Z)
     """
-    print("\nPaste player list below (same format as before).")
+    print("\nPaste player list below, as it appears on the courtreserve website.")
     print("Press Enter twice when done:\n")
 
     lines = []
