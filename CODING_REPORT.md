@@ -382,3 +382,63 @@ Successfully installed Expo CLI globally via npm. Installation completed with 12
 - Expo CLI installed despite legacy warning - version 6.3.12 works fine
 - System ready for SPIKE-AUTH-A1 (Create minimal Expo WebView test app)
 
+
+---
+
+### SPIKE-ENV-1: Install Android SDK
+**Task ID:** SPIKE-ENV-1  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 1 hour  
+**Actual Effort:** 0.5 hours  
+
+**Description:**
+Downloaded and installed Android SDK components including emulator, platform-tools, and system images for API 28 (Android 9).
+
+**Deliverables / Changes:**
+- Downloaded emulator v36.3.10
+- Installed platform-tools for adb and fastboot
+- Installed platforms;android-28 SDK
+- Installed system-images;android-28;google_apis;x86 (x86 emulator image)
+- All packages installed to: `/android-sdk-root/`
+
+**Testing / Validation:**
+- [x] Emulator binary exists: `/android-sdk-root/emulator/emulator`
+- [x] Emulator version: 36.3.10.0 confirmed
+- [x] `emulator -list-avds` works (will show AVD after SPIKE-ENV-2)
+
+**Issues / Blockers:**
+- None
+
+**Notes:**
+- Total package download: ~900MB (emulator, tools, images)
+- Ready for AVD creation in SPIKE-ENV-2
+
+---
+
+### SPIKE-ENV-2: Create Android Emulator Instance
+**Task ID:** SPIKE-ENV-2  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 0.5 hours  
+**Actual Effort:** 0.2 hours  
+
+**Description:**
+Created Android Virtual Device (AVD) with API 28, Google APIs, and x86 architecture.
+
+**Deliverables / Changes:**
+- Created AVD: `pickleball_api28`
+- Configuration: API 28, x86 architecture, Nexus 5 device profile
+- AVD location: `~/.android/avd/pickleball_api28.avd/`
+
+**Testing / Validation:**
+- [x] `emulator -list-avds` shows: `pickleball_api28`
+- [x] AVD created successfully with x86 system image
+- [x] Ready to boot emulator
+
+**Issues / Blockers:**
+- None
+
+**Notes:**
+- AVD uses x86 architecture (faster than ARM emulation)
+- Name: `pickleball_api28` for easy reference
+- Ready for SPIKE-AUTH-A1 (WebView test app)
+
