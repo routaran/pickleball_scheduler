@@ -117,7 +117,7 @@
 
 ### Direct API Auth (Fallback)
 
-- [ ] **SPIKE-AUTH-API-1:** Research DUPR API endpoints
+- [x] **SPIKE-AUTH-API-1:** Research DUPR API endpoints
   - **Files:** `/spike/DUPR_API_FINDINGS.md`
   - **Implementation:**
     - Review DUPR GitHub/docs for login endpoint
