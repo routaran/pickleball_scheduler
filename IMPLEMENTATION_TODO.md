@@ -33,11 +33,11 @@
   - **Task:** Install Xcode, verify `xcrun simctl list` works
   - **Acceptance:** `xcrun simctl list devices` shows available iOS simulators
 
-- [ ] **SPIKE-ENV-4:** Install Node.js + npm/yarn
+- [x] **SPIKE-ENV-4:** Install Node.js + npm/yarn
   - **Task:** Install Node 18+ LTS
   - **Acceptance:** `node --version && npm --version` shows v18+
 
-- [ ] **SPIKE-ENV-5:** Install Expo CLI
+- [x] **SPIKE-ENV-5:** Install Expo CLI
   - **Task:** `npm install -g expo-cli`
   - **Acceptance:** `expo --version` works, `expo whoami` prompts for login
 
