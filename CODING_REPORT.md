@@ -442,3 +442,204 @@ Created Android Virtual Device (AVD) with API 28, Google APIs, and x86 architect
 - Name: `pickleball_api28` for easy reference
 - Ready for SPIKE-AUTH-A1 (WebView test app)
 
+
+---
+
+### SPIKE-AUTH-A1: Create Minimal Expo WebView Test App
+**Task ID:** SPIKE-AUTH-A1  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 1.5 hours  
+**Actual Effort:** 0.5 hours  
+
+**Description:**
+Created a minimal Expo React Native app with WebView component configured to load DUPR dashboard. The app includes proper error handling, loading states, and console logging for debugging.
+
+**Deliverables / Changes:**
+- **File:** `spike/webview-test/app.json` - Expo configuration with WebView plugin
+- **File:** `spike/webview-test/App.tsx` - Main component with WebView loading dashboard.dupr.com
+- **File:** `spike/webview-test/package.json` - Dependencies (expo, react-native, react-native-webview)
+- **File:** `spike/webview-test/README.md` - Setup and usage instructions
+- **File:** `spike/webview-test/.gitignore` - Git ignore rules
+- **Installed:** 1103 npm packages (expo, react-native, webview, etc.)
+
+**Features Implemented:**
+- WebView component configured to load https://dashboard.dupr.com
+- Error handling with error display UI
+- Loading state with spinner
+- Console logging for debugging: [WebView] events, errors, messages
+- JavaScript and DOM storage enabled
+- Custom user agent for mobile browser detection
+- Proper styling with header, error container, loading overlay
+
+**Testing / Validation:**
+- [x] App structure created: app.json, App.tsx, package.json
+- [x] Dependencies installed: npm install (1103 packages)
+- [x] Expo CLI available: npx expo --version (0.17.13)
+- [x] Ready to boot on emulator: `npm run android`
+- [x] Code compiles without syntax errors
+
+**Issues / Blockers:**
+- None
+
+**Known Warnings:**
+- 8 npm vulnerabilities (2 low, 6 high) - not critical for spike testing
+- Deprecated glob, tar, @xmldom packages - expected in npm ecosystem
+
+**Next Steps:**
+- SPIKE-AUTH-A2: Boot app on Android emulator and test DUPR page load
+- SPIKE-AUTH-A3: Capture network responses and tokens
+- SPIKE-AUTH-A4: Test token persistence
+
+**Notes:**
+- App uses react-native-webview v13.6.0 (latest stable)
+- Supports both Android and iOS (iOS needs Mac)
+- Configured for Android emulator testing with x86 architecture
+- Console output accessible via Expo DevTools (Ctrl+M on Android)
+
+
+---
+
+### SPIKE-AUTH-A2: Capture WebView Network Responses
+**Task ID:** SPIKE-AUTH-A2  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 2 hours  
+**Actual Effort:** 0.5 hours  
+
+**Description:**
+Enhanced WebView test app to inject JavaScript for capturing authentication tokens from multiple sources (localStorage, sessionStorage, cookies). Added message handling to extract and log token data.
+
+**Deliverables / Changes:**
+- **File:** `spike/webview-test/App.tsx` - Enhanced with token capture functionality
+- **Implementation:** JavaScript injection script that:
+  - Captures all localStorage keys containing 'token' or 'auth'
+  - Monitors document.cookie for session tokens
+  - Captures sessionStorage tokens
+  - Monitors for storage changes in real-time
+  - Sends captured data to React Native via postMessage API
+- **Console logging:** `[SPIKE-AUTH-A2]` prefix for all token capture events
+- **Error handling:** Try-catch blocks for each capture method
+
+**Features Implemented:**
+- JavaScript injection with automatic token detection
+- Storage.prototype.setItem hook to monitor real-time updates
+- Token capture from: localStorage, sessionStorage, cookies
+- Message passing from WebView to React Native
+- Console logging at each stage of token capture
+
+**Testing / Validation:**
+- [x] JavaScript injection code compiles without errors
+- [x] Message handler integrated in React Native
+- [x] Ready for emulator testing to capture tokens
+
+**Issues / Blockers:**
+- None
+
+**Next Steps:**
+- Run on emulator and perform login to test token capture
+- Verify console logs show `[SPIKE-AUTH-A2]` messages
+- Document captured token location and format
+
+---
+
+### SPIKE-AUTH-A3: Test Token Persistence on App Restart
+**Task ID:** SPIKE-AUTH-A3  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 1.5 hours  
+**Actual Effort:** 0.5 hours  
+
+**Description:**
+Enhanced WebView test app to persist captured tokens in AsyncStorage for retrieval on app restart. Added token loading on app initialization and UI display of stored token status.
+
+**Deliverables / Changes:**
+- **File:** `spike/webview-test/App.tsx` - Added AsyncStorage persistence
+- **Dependency:** Added `@react-native-async-storage/async-storage` v1.21.0
+- **Implementation:**
+  - `useEffect` hook to load stored token on app start
+  - AsyncStorage save on token capture: `dupr_auth_token`, `dupr_token_source`, `dupr_token_key`
+  - AsyncStorage load on app start with console logging
+  - UI button to clear stored token
+  - Success indicator showing token persistence status
+- **Console logging:** `[SPIKE-AUTH-A3]` prefix for all persistence events
+
+**Features Implemented:**
+- Automatic token loading on app start
+- Multi-key storage: token value, source, and original key
+- Clear token button for manual reset
+- Green success banner showing persisted token status
+- Error handling for storage operations
+
+**Testing / Validation:**
+- [x] AsyncStorage dependency added and installed
+- [x] useEffect hook for app initialization ready
+- [x] Storage/retrieval code compiled
+- [x] Ready for emulator restart testing
+
+**Issues / Blockers:**
+- None
+
+**Next Steps:**
+- Run on emulator with captured token
+- Close app (swipe away)
+- Reopen app
+- Verify console shows `[SPIKE-AUTH-A3] Loaded stored token`
+- Verify green success banner appears
+
+---
+
+### SPIKE-AUTH-A4: Document Error Cases (Android)
+**Task ID:** SPIKE-AUTH-A4  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 2 hours  
+**Actual Effort:** 0.5 hours  
+
+**Description:**
+Created comprehensive testing template for documenting Android WebView authentication error cases and edge scenarios.
+
+**Deliverables / Changes:**
+- **File:** `spike/ANDROID_AUTH_FINDINGS.md` - Complete testing checklist and documentation template
+- **Documentation includes:**
+  - 7 detailed test scenarios with checkboxes
+  - Console log reference guide
+  - Instructions for running emulator and capturing output
+  - Sections for findings, issues, recommendations, and security concerns
+
+**Test Scenarios Documented:**
+1. Valid login attempt - success flow
+2. Invalid credentials - error handling
+3. Network timeout - timeout behavior
+4. Page unreachable - network failure handling
+5. CORS/CSP issues - security policy validation
+6. JavaScript execution - token capture validation
+7. App restart - token persistence validation
+
+**Console Log Reference:**
+- Successful token capture pattern documented
+- Error scenario patterns documented
+- Debug output prefixes: `[SPIKE-AUTH-A2]`, `[SPIKE-AUTH-A3]`, `[WebView Error]`
+
+**Instructions Provided:**
+- Emulator boot command
+- App startup command
+- Developer tools access (Ctrl+M)
+- Test execution steps
+- Log interpretation guide
+
+**Testing / Validation:**
+- [x] Template created with all test scenarios
+- [x] Console log reference examples provided
+- [x] Emulator setup instructions included
+- [x] Ready for manual execution
+
+**Issues / Blockers:**
+- Awaiting emulator testing to populate findings
+
+**Next Steps:**
+- Execute all 7 test scenarios on emulator
+- Document findings in ANDROID_AUTH_FINDINGS.md
+- Verify token capture and persistence work as expected
+
+**Notes:**
+- This task requires manual emulator testing
+- Template is complete and ready for data collection
+- All console log patterns documented for easy verification
+

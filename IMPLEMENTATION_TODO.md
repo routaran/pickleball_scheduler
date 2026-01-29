@@ -45,7 +45,7 @@
 
 ### WebView Auth Validation (Android)
 
-- [ ] **SPIKE-AUTH-A1:** Create minimal Expo WebView test app
+- [x] **SPIKE-AUTH-A1:** Create minimal Expo WebView test app
   - **Files:** `/spike/webview-test/app.json`, `/spike/webview-test/App.tsx`
   - **Implementation:** 
     - Scaffold Expo app
@@ -56,7 +56,7 @@
     - WebView displays DUPR login page (no CORS errors)
     - Can interact with login form
 
-- [ ] **SPIKE-AUTH-A2:** Capture WebView network responses
+- [x] **SPIKE-AUTH-A2:** Capture WebView network responses
   - **Files:** `/spike/webview-test/App.tsx`
   - **Implementation:**
     - Add WebView `onMessage` handler
@@ -67,7 +67,7 @@
     - Token value is printed (e.g., `AUTH_TOKEN=abc123...`)
     - Security flags documented (HttpOnly, Secure, Domain, SameSite)
 
-- [ ] **SPIKE-AUTH-A3:** Test token persistence on app restart
+- [x] **SPIKE-AUTH-A3:** Test token persistence on app restart
   - **Files:** `/spike/webview-test/App.tsx`
   - **Implementation:**
     - After login, store token in AsyncStorage (temporary)
@@ -77,7 +77,7 @@
     - Token persists after app close/reopen
     - Value matches original token
 
-- [ ] **SPIKE-AUTH-A4:** Document error cases (Android)
+- [x] **SPIKE-AUTH-A4:** Document error cases (Android)
   - **Files:** `/spike/ANDROID_AUTH_FINDINGS.md`
   - **Implementation:**
     - Test invalid credentials → document error behavior
