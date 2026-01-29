@@ -82,11 +82,12 @@ class DUPRAuthenticator:
 
             # Navigate to dashboard to get user info
             try:
-                page.goto(DUPR_DASHBOARD_URL)
-                page.wait_for_load_state('networkidle', timeout=10000)
-                time.sleep(PAGE_LOAD_WAIT_S)  # Extra wait for JS rendering
-
-                # Extract user info from page
+                page.goto(DUPR_DASHBOARD_URL, wait_until='domcontentloaded')
+                
+                # Wait for user name element to appear, then extract user info
+                # Close browser as soon as we have token + name + rating (all we need)
+                page.wait_for_selector('span.text-xl.text-white', timeout=10000)
+                
                 user_data = self._extract_user_info(page)
                 if user_data and user_data.get('name'):
                     self._user_info = UserInfo(

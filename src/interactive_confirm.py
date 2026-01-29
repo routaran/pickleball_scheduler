@@ -68,17 +68,19 @@ def prompt_player_selection(
     if len(candidates) > max_display:
         print(f"  ... and {len(candidates) - max_display} more")
     
-    print(f"  {len(display_candidates) + 1}. Skip (use default rating)")
+    print(f"  {len(display_candidates) + 1}. Skip (use default rating of 2.5)")
     print()
     
     # Prompt for selection
     while True:
         try:
-            choice = input(f"Select [1-{len(display_candidates) + 1}]: ").strip()
+            choice = input(f"Select [1-{len(display_candidates) + 1}] (Default 1): ").strip()
             
             if not choice:
-                # Empty input = skip
-                return None
+                # Empty input = default to first option
+                selected = display_candidates[0]
+                print(f"Selected: {selected.full_name}")
+                return selected
             
             choice_num = int(choice)
             
