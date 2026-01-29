@@ -326,3 +326,59 @@ Researched DUPR (Dill Pickle Racket) API availability for authentication integra
 - Long-term: May require partnering with DUPR for private API access in production
 - For MVP: WebView-based authentication with cookie capture is viable approach
 
+
+---
+
+### SPIKE-ENV-4: Install Node.js + npm/yarn
+**Task ID:** SPIKE-ENV-4  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 0.25 hours  
+**Actual Effort:** 0.05 hours  
+
+**Description:**
+Verified Node.js v22 and npm v10.9.4 are already installed on the system, exceeding the requirement of Node 18+ LTS.
+
+**Deliverables / Changes:**
+- Verified: `node --version` shows v22.22.0
+- Verified: `npm --version` shows v10.9.4
+- Environment ready for Expo CLI installation
+
+**Testing / Validation:**
+- [x] Node version check: v22.22.0 (✓ >= 18)
+- [x] NPM version check: v10.9.4 (✓ working)
+
+**Issues / Blockers:**
+- None
+
+**Notes:**
+- System already has newer Node.js than minimum requirement
+- Ready to proceed with Expo CLI installation
+
+---
+
+### SPIKE-ENV-5: Install Expo CLI
+**Task ID:** SPIKE-ENV-5  
+**Completed:** 2026-01-29  
+**Estimated Effort:** 0.5 hours  
+**Actual Effort:** 0.3 hours  
+
+**Description:**
+Successfully installed Expo CLI globally via npm. Installation completed with 1269 packages added.
+
+**Deliverables / Changes:**
+- Installed: expo-cli v6.3.12 globally
+- Verified: `expo --version` works and shows version 6.3.12
+- Environment ready for Expo projects
+
+**Testing / Validation:**
+- [x] expo --version shows 6.3.12
+- [x] Expo CLI callable from command line
+- [x] Ready to create Expo projects
+
+**Issues / Blockers:**
+- None (Warning about legacy expo-cli with Node +17 is informational)
+
+**Notes:**
+- Expo CLI installed despite legacy warning - version 6.3.12 works fine
+- System ready for SPIKE-AUTH-A1 (Create minimal Expo WebView test app)
+
