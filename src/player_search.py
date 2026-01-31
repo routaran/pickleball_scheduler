@@ -479,19 +479,13 @@ class PlayerSearcher:
             search_name: The name used to search for the player.
             player: The matched DUPR player.
         """
-        # Only register if the search name differs from the DUPR name
-        # (no point caching exact matches)
-        search_normalized = self._normalize_name(search_name)
-        dupr_normalized = self._normalize_name(player.full_name)
-        
-        if search_normalized != dupr_normalized:
-            self.player_registry.register(
-                search_name=search_name,
-                dupr_id=player.dupr_id,
-                dupr_name=player.full_name,
-                rating=player.best_rating,
-                location=player.short_address
-            )
+        self.player_registry.register(
+            search_name=search_name,
+            dupr_id=player.dupr_id,
+            dupr_name=player.full_name,
+            rating=player.best_rating,
+            location=player.short_address
+        )
     
     def save_registry(self) -> None:
         """Save the player registry to disk."""

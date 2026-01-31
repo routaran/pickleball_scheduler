@@ -77,12 +77,10 @@ def prompt_player_selection(
             choice = input(f"Select [1-{len(display_candidates) + 1}] (Default 1): ").strip()
             
             if not choice:
-                # Empty input = default to first option
-                selected = display_candidates[0]
-                print(f"Selected: {selected.full_name}")
-                return selected
-            
-            choice_num = int(choice)
+                # Empty input = default to 1, which is the first candidate
+                choice_num = 1
+            else:
+                choice_num = int(choice)
             
             if choice_num == len(display_candidates) + 1:
                 # Skip option
