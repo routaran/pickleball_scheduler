@@ -21,11 +21,13 @@ import {
   isValidPickleBrosCount,
   SearchResult,
   PlayerOverride as CorePlayerOverride,
+  SearchProgressCallback,
 } from '@dupr/core';
 import { getOverrides } from './overrideStorage';
 import type { PlayerOverride } from './overrideStorage';
 import { RegistryService } from './registryService';
 import { useAuthStore } from '../stores/authStore';
+import { useGameStore, SearchProgressEntry, SearchStatus } from '../stores/gameStore';
 
 // =============================================================================
 // Types
@@ -48,6 +50,35 @@ export class GameService {
   constructor(token: string) {
     this.token = token;
     this.client = new DUPRClient(token);
+  }
+
+  /**
+   * Create a progress callback that updates the game store
+   */
+  private createProgressCallback(totalPlayers: number): SearchProgressCallback {
+    // Initialize progress state
+    useGameStore.getState().setSearchProgress({
+      total: totalPlayers,
+      current: 0,
+      currentName: '',
+      completed: [],
+    });
+
+    return {
+      onStart: (index, _total, name) => {
+        useGameStore.getState().updateSearchCurrent(index + 1, name);
+      },
+      onComplete: (_index, _total, result) => {
+        const status: SearchStatus = result.found ? 'found' : 'default';
+        const entry: SearchProgressEntry = {
+          name: result.name,
+          status,
+          duprName: result.duprName ?? undefined,
+          rating: result.rating,
+        };
+        useGameStore.getState().addSearchResult(entry);
+      },
+    };
   }
 
   /**
@@ -100,8 +131,9 @@ export class GameService {
       throw new Error('No players found in input');
     }
 
-    // 3. Look up each player
-    const searchResults = await searcher.searchPlayers(playerNames);
+    // 3. Look up each player with progress tracking
+    const progressCallback = this.createProgressCallback(playerNames.length);
+    const searchResults = await searcher.searchPlayers(playerNames, progressCallback);
 
     // Convert SearchResult to PlayerWithRating
     const players = this.convertSearchResultsToPlayers(searchResults);
@@ -139,13 +171,14 @@ export class GameService {
       throw new Error('No teams found in input');
     }
 
-    // 3. Look up all players
+    // 3. Look up all players with progress tracking
     const allPlayerNames: string[] = [];
     for (const team of teamPairs) {
       allPlayerNames.push(team.player1, team.player2);
     }
 
-    const searchResults = await searcher.searchPlayers(allPlayerNames);
+    const progressCallback = this.createProgressCallback(allPlayerNames.length);
+    const searchResults = await searcher.searchPlayers(allPlayerNames, progressCallback);
 
     // Convert to map for easy lookup
     const playerMap = new Map<string, PlayerWithRating>();
@@ -229,8 +262,9 @@ export class GameService {
       );
     }
 
-    // 4. Look up players
-    const searchResults = await searcher.searchPlayers(playerNames);
+    // 4. Look up players with progress tracking
+    const progressCallback = this.createProgressCallback(playerNames.length);
+    const searchResults = await searcher.searchPlayers(playerNames, progressCallback);
 
     // Convert SearchResult to PlayerWithRating
     const players = this.convertSearchResultsToPlayers(searchResults);

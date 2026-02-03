@@ -28,7 +28,17 @@ const GAME_TYPES: GameTypeOption[] = [
 
 export function GameScreen() {
   const navigation = useNavigation();
-  const { format, inputText, setFormat, setResults, setHtml, setProcessing, setError, isProcessing } = useGameStore();
+  // Use individual selectors for better reactivity to state changes
+  const format = useGameStore((state) => state.format);
+  const inputText = useGameStore((state) => state.inputText);
+  const setFormat = useGameStore((state) => state.setFormat);
+  const setResults = useGameStore((state) => state.setResults);
+  const setHtml = useGameStore((state) => state.setHtml);
+  const setProcessing = useGameStore((state) => state.setProcessing);
+  const setError = useGameStore((state) => state.setError);
+  const isProcessing = useGameStore((state) => state.isProcessing);
+  const searchProgress = useGameStore((state) => state.searchProgress);
+  const setSearchProgress = useGameStore((state) => state.setSearchProgress);
   const { token } = useAuthStore();
   const [showInput, setShowInput] = useState(false);
 
@@ -94,8 +104,9 @@ export function GameScreen() {
       Alert.alert('Processing Error', errorMessage);
     } finally {
       setProcessing(false);
+      setSearchProgress(null);
     }
-  }, [token, format, inputText, setResults, setHtml, setProcessing, setError, navigation]);
+  }, [token, format, inputText, setResults, setHtml, setProcessing, setError, setSearchProgress, navigation]);
 
   // Helper function to extract pools from players
   // This is a temporary solution until we refactor the core library to return pools directly
@@ -136,9 +147,50 @@ export function GameScreen() {
         {isProcessing && (
           <View style={styles.loadingOverlay}>
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#2196F3" />
-              <Text style={styles.loadingText}>Processing players...</Text>
-              <Text style={styles.loadingSubtext}>Looking up ratings on DUPR</Text>
+              <Text style={styles.loadingText}>Looking up DUPR ratings</Text>
+              {searchProgress && (
+                <>
+                  <Text style={styles.progressCounter}>
+                    {searchProgress.current} / {searchProgress.total}
+                  </Text>
+                  <View style={styles.currentSearchContainer}>
+                    <ActivityIndicator size="small" color="#2196F3" />
+                    <Text style={styles.currentSearchText} numberOfLines={1}>
+                      {searchProgress.currentName}
+                    </Text>
+                  </View>
+                  {searchProgress.completed.length > 0 && (() => {
+                    const lastResult = searchProgress.completed[searchProgress.completed.length - 1];
+                    return (
+                      <View style={styles.lastResultContainer}>
+                        <Text style={styles.lastResultName} numberOfLines={1}>
+                          {lastResult.name}
+                        </Text>
+                        <View style={[
+                          styles.statusBadge,
+                          lastResult.status === 'found' ? styles.statusFound : styles.statusDefault
+                        ]}>
+                          <Text style={[
+                            styles.statusText,
+                            lastResult.status === 'found' ? styles.statusTextFound : styles.statusTextDefault
+                          ]}>
+                            {lastResult.status === 'found' ? 'Found' : 'Default'}
+                          </Text>
+                        </View>
+                        <Text style={styles.lastResultRating}>
+                          {lastResult.rating?.toFixed(2) ?? '3.00'}
+                        </Text>
+                      </View>
+                    );
+                  })()}
+                </>
+              )}
+              {!searchProgress && (
+                <>
+                  <ActivityIndicator size="large" color="#2196F3" style={{ marginTop: 16 }} />
+                  <Text style={styles.loadingSubtext}>Initializing...</Text>
+                </>
+              )}
             </View>
           </View>
         )}
@@ -286,16 +338,18 @@ const styles = StyleSheet.create({
   loadingContainer: {
     backgroundColor: '#fff',
     borderRadius: 16,
-    padding: 32,
+    padding: 24,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,
     elevation: 8,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
   },
   loadingText: {
-    marginTop: 16,
     fontSize: 18,
     fontWeight: 'bold',
     color: '#333',
@@ -304,5 +358,71 @@ const styles = StyleSheet.create({
     marginTop: 8,
     fontSize: 14,
     color: '#666',
+  },
+  progressCounter: {
+    marginTop: 8,
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#2196F3',
+  },
+  currentSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    marginBottom: 16,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: '#E3F2FD',
+    borderRadius: 8,
+  },
+  currentSearchText: {
+    marginLeft: 8,
+    fontSize: 14,
+    color: '#1565C0',
+    fontWeight: '500',
+    flex: 1,
+  },
+  lastResultContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: '#F5F5F5',
+    borderRadius: 8,
+    width: '100%',
+  },
+  lastResultName: {
+    flex: 1,
+    fontSize: 15,
+    color: '#333',
+    fontWeight: '500',
+  },
+  lastResultRating: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#333',
+    marginLeft: 8,
+  },
+  statusBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginHorizontal: 8,
+  },
+  statusFound: {
+    backgroundColor: '#E8F5E9',
+  },
+  statusDefault: {
+    backgroundColor: '#FFF3E0',
+  },
+  statusText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusTextFound: {
+    color: '#2E7D32',
+  },
+  statusTextDefault: {
+    color: '#E65100',
   },
 });
