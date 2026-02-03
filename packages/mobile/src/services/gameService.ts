@@ -22,6 +22,7 @@ import {
   SearchResult,
   PlayerOverride as CorePlayerOverride,
   SearchProgressCallback,
+  DEFAULT_RATING,
 } from '@dupr/core';
 import { getOverrides } from './overrideStorage';
 import type { PlayerOverride } from './overrideStorage';
@@ -93,9 +94,9 @@ export class GameService {
     const overridesMap = new Map<string, CorePlayerOverride>();
     for (const override of storedOverrides) {
       // Validate rating before adding
-      const rating = typeof override.rating === 'number' ? override.rating : 3.0;
+      const rating = typeof override.rating === 'number' ? override.rating : DEFAULT_RATING;
       if (typeof override.rating !== 'number') {
-        console.warn(`[GameService] Invalid rating for override ${override.searchName}:`, override.rating, '- using default 3.0');
+        console.warn(`[GameService] Invalid rating for override ${override.searchName}:`, override.rating, `- using default ${DEFAULT_RATING}`);
       }
       overridesMap.set(override.searchName.toLowerCase(), {
         duprId: override.duprId,
@@ -313,18 +314,18 @@ export class GameService {
     } else if (typeof result.rating === 'string') {
       rating = parseFloat(result.rating);
       if (isNaN(rating)) {
-        console.warn(`[GameService] Could not parse rating for player ${result.name}:`, result.rating, '- using default 3.0');
-        rating = 3.0;
+        console.warn(`[GameService] Could not parse rating for player ${result.name}:`, result.rating, `- using default ${DEFAULT_RATING}`);
+        rating = DEFAULT_RATING;
       } else {
         console.log(`[GameService] Parsed string rating for player ${result.name}: "${result.rating}" -> ${rating}`);
       }
     } else {
-      console.warn(`[GameService] Invalid rating type for player ${result.name}:`, result.rating, typeof result.rating, '- using default 3.0');
-      rating = 3.0;
+      console.warn(`[GameService] Invalid rating type for player ${result.name}:`, result.rating, typeof result.rating, `- using default ${DEFAULT_RATING}`);
+      rating = DEFAULT_RATING;
     }
 
     // If search failed (using default rating), check if this is the logged-in user
-    if (!result.found || rating === 3.0) {
+    if (!result.found || rating === DEFAULT_RATING) {
       const authUser = useAuthStore.getState().user;
       if (authUser && authUser.name && authUser.rating) {
         // Compare names case-insensitively

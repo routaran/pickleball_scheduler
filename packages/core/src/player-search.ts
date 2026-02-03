@@ -15,7 +15,7 @@ export const ALBERTA_LAT = 53.9332706;
 export const ALBERTA_LNG = -116.5765035;
 export const CANADA_LAT = 56.130366;
 export const CANADA_LNG = -106.346771;
-export const DEFAULT_RATING = 3.0;
+export const DEFAULT_RATING = 2.5;
 export const FUZZY_THRESHOLD = 0.85;
 
 // Common short last names that need special handling (full name search preferred)
