@@ -1,6 +1,8 @@
 import { TokenStorage } from './tokenStorage';
 import { RegistryService } from './registryService';
+import { clearOverrides } from './overrideStorage';
 import { useAuthStore } from '../stores/authStore';
+import { useGameStore } from '../stores/gameStore';
 import { extractEmailFromToken } from '../utils/jwtUtils';
 import { DUPRClient } from '@dupr/core';
 
@@ -34,20 +36,35 @@ export const AuthService = {
   },
 
   /**
-   * Logs out the user by clearing token/user from secure storage,
-   * resetting the registry, and resetting auth state in the store.
+   * Logs out the user by clearing all session data:
+   * - Token and user from secure storage
+   * - Player overrides from AsyncStorage
+   * - Player registry cache
+   * - Game store state (input, results, etc.)
+   * - Auth state in Zustand store
    */
   async logout(): Promise<void> {
     // Clear token and user from secure storage
     await TokenStorage.clearAll();
 
+    // Clear player overrides from AsyncStorage
+    try {
+      await clearOverrides();
+      console.log('[AuthService] Cleared player overrides');
+    } catch (err) {
+      console.warn('[AuthService] Failed to clear overrides:', err);
+    }
+
     // Reset the player registry
     RegistryService.resetRegistry();
+
+    // Reset game store state (clears input text, results, format, etc.)
+    useGameStore.getState().reset();
 
     // Reset auth state in Zustand store
     useAuthStore.getState().logout();
 
-    console.log('[AuthService] Logged out, cleared token/user and reset registry');
+    console.log('[AuthService] Logged out - cleared all session data');
   },
 
   /**
