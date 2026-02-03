@@ -1,0 +1,316 @@
+{
+  "name": "picklebros_edge_cases",
+  "description": "PickleBros Monday format edge cases and validation scenarios. Tests minimum viable input (4 players), tied ratings, whitespace handling, name normalization, and override functionality.",
+  "game_type": "picklebros_monday",
+  "test_scenarios": [
+    {
+      "scenario_name": "minimum_4_players",
+      "description": "Minimum valid input: exactly 4 players forming 1 pool",
+      "input": [
+        "Solo Pool Player 1",
+        "Solo Pool Player 2",
+        "Solo Pool Player 3",
+        "Solo Pool Player 4"
+      ],
+      "pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            {
+              "name": "Solo Pool Player 1",
+              "dupr_id": "SP401",
+              "rating": 4.25,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Solo Pool Player 2",
+              "dupr_id": "SP402",
+              "rating": 3.85,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Solo Pool Player 3",
+              "dupr_id": "SP403",
+              "rating": 3.45,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Solo Pool Player 4",
+              "dupr_id": "SP404",
+              "rating": 3.10,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            }
+          ],
+          "notes": "Single pool A with exactly 4 players - minimum valid PickleBros configuration"
+        }
+      ],
+      "expected_pool_count": 1
+    },
+    {
+      "scenario_name": "tied_ratings",
+      "description": "Players with identical ratings - tests stable sort order",
+      "input": [
+        "Tied Player Alpha",
+        "Tied Player Beta",
+        "Tied Player Gamma",
+        "Tied Player Delta"
+      ],
+      "pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            {
+              "name": "Tied Player Alpha",
+              "dupr_id": "TP501",
+              "rating": 3.50,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Tied Player Beta",
+              "dupr_id": "TP502",
+              "rating": 3.50,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Tied Player Gamma",
+              "dupr_id": "TP503",
+              "rating": 3.50,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Tied Player Delta",
+              "dupr_id": "TP504",
+              "rating": 3.50,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            }
+          ],
+          "notes": "All 4 players have identical 3.50 rating - sort should be stable (preserve input order)"
+        }
+      ],
+      "expected_behavior": "Stable sort preserves input order when ratings are tied"
+    },
+    {
+      "scenario_name": "whitespace_handling",
+      "description": "Names with leading/trailing whitespace should be trimmed",
+      "input": [
+        "  Padded Name Front  ",
+        "Normal Name",
+        "   Leading Only",
+        "Trailing Only   "
+      ],
+      "expected_cleaned_names": [
+        "Padded Name Front",
+        "Normal Name",
+        "Leading Only",
+        "Trailing Only"
+      ],
+      "pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            {
+              "name": "Padded Name Front",
+              "dupr_id": "WS601",
+              "rating": 4.10,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Normal Name",
+              "dupr_id": "WS602",
+              "rating": 3.80,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Leading Only",
+              "dupr_id": "WS603",
+              "rating": 3.55,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Trailing Only",
+              "dupr_id": "WS604",
+              "rating": 3.25,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            }
+          ],
+          "notes": "All whitespace trimmed before lookup and display"
+        }
+      ]
+    },
+    {
+      "scenario_name": "override_players",
+      "description": "Players with hardcoded overrides in player_overrides.json",
+      "input": [
+        "Override Player One",
+        "Override Player Two",
+        "Regular Player",
+        "Another Regular"
+      ],
+      "player_overrides": [
+        {
+          "name": "Override Player One",
+          "rating": 4.75,
+          "reason": "Player exists on DUPR but not findable via search API"
+        },
+        {
+          "name": "Override Player Two",
+          "rating": 3.90,
+          "reason": "Manual rating entry by administrator"
+        }
+      ],
+      "pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            {
+              "name": "Override Player One",
+              "dupr_id": null,
+              "rating": 4.75,
+              "found": true,
+              "search_method": "Override: Player exists on DUPR but not findable via search API"
+            },
+            {
+              "name": "Regular Player",
+              "dupr_id": "RP701",
+              "rating": 4.20,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Override Player Two",
+              "dupr_id": null,
+              "rating": 3.90,
+              "found": true,
+              "search_method": "Override: Manual rating entry by administrator"
+            },
+            {
+              "name": "Another Regular",
+              "dupr_id": "AR702",
+              "rating": 3.45,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            }
+          ],
+          "notes": "Mix of override and API-found players. Overrides marked with 'Override:' prefix in search_method. Override players have null dupr_id but found=true."
+        }
+      ]
+    },
+    {
+      "scenario_name": "special_characters_in_names",
+      "description": "Names with special characters (hyphens, apostrophes, accents)",
+      "input": [
+        "Mary-Jane Watson",
+        "O'Brien Patrick",
+        "Jean-Pierre Dupont",
+        "Muller Hans"
+      ],
+      "pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            {
+              "name": "Mary-Jane Watson",
+              "dupr_id": "SC801",
+              "dupr_name": "Mary-Jane Watson",
+              "rating": 4.05,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "O'Brien Patrick",
+              "dupr_id": "SC802",
+              "dupr_name": "O'Brien Patrick",
+              "rating": 3.85,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            },
+            {
+              "name": "Jean-Pierre Dupont",
+              "dupr_id": "SC803",
+              "dupr_name": "Jean-Pierre Dupont",
+              "rating": 3.60,
+              "found": true,
+              "search_method": "Full name + Canada"
+            },
+            {
+              "name": "Muller Hans",
+              "dupr_id": "SC804",
+              "dupr_name": "Muller Hans",
+              "rating": 3.35,
+              "found": true,
+              "search_method": "Full name + Alberta"
+            }
+          ],
+          "notes": "UTF-8 characters and special name formats are preserved and searchable"
+        }
+      ]
+    }
+  ],
+  "validation_errors": [
+    {
+      "scenario_name": "not_multiple_of_4",
+      "description": "Player count is not a multiple of 4 - should fail validation",
+      "input": [
+        "Player 1",
+        "Player 2",
+        "Player 3",
+        "Player 4",
+        "Player 5"
+      ],
+      "expected_error": "Player count must be multiple of 4. Got 5 players.",
+      "error_type": "ValidationError"
+    },
+    {
+      "scenario_name": "empty_input",
+      "description": "No players provided - should fail validation",
+      "input": [],
+      "expected_error": "At least 4 players required for PickleBros Monday format.",
+      "error_type": "ValidationError"
+    },
+    {
+      "scenario_name": "too_few_players",
+      "description": "Fewer than 4 players - should fail validation",
+      "input": [
+        "Player 1",
+        "Player 2",
+        "Player 3"
+      ],
+      "expected_error": "Player count must be multiple of 4. Got 3 players.",
+      "error_type": "ValidationError"
+    },
+    {
+      "scenario_name": "single_player",
+      "description": "Only 1 player - should fail validation",
+      "input": [
+        "Lonely Player"
+      ],
+      "expected_error": "Player count must be multiple of 4. Got 1 players.",
+      "error_type": "ValidationError"
+    }
+  ],
+  "constraints": {
+    "players_per_pool": 4,
+    "minimum_pools": 1,
+    "total_players_must_be_multiple_of": 4,
+    "minimum_rating": 2.0,
+    "maximum_rating": 8.0,
+    "default_rating": 3.0
+  },
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Comprehensive edge case fixture for PickleBros Monday format. Tests: (1) minimum 4-player single pool, (2) tied rating stable sort, (3) whitespace trimming, (4) player overrides, (5) special characters in names, and (6) validation error scenarios for invalid player counts. Use test_scenarios for valid inputs and validation_errors for expected failures."
+  }
+}

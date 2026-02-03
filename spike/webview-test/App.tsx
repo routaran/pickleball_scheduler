@@ -1,189 +1,414 @@
-import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, Text, ActivityIndicator, ScrollView, Button } from 'react-native';
-import { WebView } from 'react-native-webview';
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  StyleSheet,
+  View,
+  Text,
+  ActivityIndicator,
+  ScrollView,
+  TouchableOpacity,
+  Platform,
+  SafeAreaView
+} from 'react-native';
+import { WebView, WebViewMessageEvent } from 'react-native-webview';
+import * as SecureStore from 'expo-secure-store';
+
+// Token storage key
+const TOKEN_STORAGE_KEY = 'dupr_auth_token';
+const TOKEN_EXPIRY_KEY = 'dupr_token_expiry';
+
+// DUPR URLs
+const DUPR_LOGIN_URL = 'https://dashboard.dupr.com/login';
+const DUPR_DASHBOARD_URL = 'https://dashboard.dupr.com';
+
+// JavaScript to inject into WebView to capture authentication tokens
+const TOKEN_CAPTURE_SCRIPT = `
+(function() {
+  // Flag to prevent duplicate messages
+  let hasReportedToken = false;
+
+  function log(message) {
+    console.log('[DUPR-AUTH] ' + message);
+  }
+
+  function sendMessage(data) {
+    if (window.ReactNativeWebView) {
+      window.ReactNativeWebView.postMessage(JSON.stringify(data));
+    }
+  }
+
+  function checkForToken() {
+    if (hasReportedToken) return;
+
+    try {
+      // Check localStorage for auth tokens
+      const localStorageKeys = Object.keys(localStorage);
+      log('Checking localStorage keys: ' + localStorageKeys.join(', '));
+
+      // Common token key patterns used by DUPR
+      const tokenPatterns = [
+        'token', 'auth', 'jwt', 'access', 'session',
+        'dupr', 'bearer', 'id_token', 'access_token'
+      ];
+
+      for (const key of localStorageKeys) {
+        const keyLower = key.toLowerCase();
+        const isTokenKey = tokenPatterns.some(pattern => keyLower.includes(pattern));
+
+        if (isTokenKey) {
+          const value = localStorage.getItem(key);
+
+          // Check if it looks like a JWT (starts with eyJ)
+          if (value && (value.startsWith('eyJ') || value.length > 50)) {
+            log('Found potential token in key: ' + key);
+            hasReportedToken = true;
+
+            sendMessage({
+              type: 'TOKEN_FOUND',
+              source: 'localStorage',
+              key: key,
+              value: value,
+              timestamp: Date.now()
+            });
+            return;
+          }
+        }
+      }
+
+      // Also check sessionStorage
+      const sessionStorageKeys = Object.keys(sessionStorage);
+      log('Checking sessionStorage keys: ' + sessionStorageKeys.join(', '));
+
+      for (const key of sessionStorageKeys) {
+        const keyLower = key.toLowerCase();
+        const isTokenKey = tokenPatterns.some(pattern => keyLower.includes(pattern));
+
+        if (isTokenKey) {
+          const value = sessionStorage.getItem(key);
+
+          if (value && (value.startsWith('eyJ') || value.length > 50)) {
+            log('Found potential token in sessionStorage key: ' + key);
+            hasReportedToken = true;
+
+            sendMessage({
+              type: 'TOKEN_FOUND',
+              source: 'sessionStorage',
+              key: key,
+              value: value,
+              timestamp: Date.now()
+            });
+            return;
+          }
+        }
+      }
+
+      // Report page state for debugging
+      sendMessage({
+        type: 'PAGE_STATE',
+        url: window.location.href,
+        localStorageKeys: localStorageKeys,
+        sessionStorageKeys: sessionStorageKeys,
+        timestamp: Date.now()
+      });
+
+    } catch (e) {
+      log('Error checking for token: ' + e.message);
+      sendMessage({
+        type: 'ERROR',
+        message: e.message,
+        timestamp: Date.now()
+      });
+    }
+  }
+
+  // Initial check
+  log('Token capture script loaded');
+  checkForToken();
+
+  // Check periodically after page loads (tokens may be set after initial load)
+  let checkCount = 0;
+  const maxChecks = 20;
+  const checkInterval = setInterval(() => {
+    checkCount++;
+    if (checkCount >= maxChecks || hasReportedToken) {
+      clearInterval(checkInterval);
+      if (!hasReportedToken) {
+        log('Max checks reached, no token found');
+        sendMessage({
+          type: 'NO_TOKEN_FOUND',
+          url: window.location.href,
+          timestamp: Date.now()
+        });
+      }
+      return;
+    }
+    checkForToken();
+  }, 1000);
+
+  // Also check when page URL changes (for SPA navigation)
+  let lastUrl = window.location.href;
+  const urlCheckInterval = setInterval(() => {
+    if (window.location.href !== lastUrl) {
+      lastUrl = window.location.href;
+      log('URL changed to: ' + lastUrl);
+      hasReportedToken = false; // Reset to check again on new page
+      checkForToken();
+    }
+  }, 500);
+
+  // Listen for storage events (in case token is set by another tab/script)
+  window.addEventListener('storage', function(e) {
+    log('Storage event: ' + e.key);
+    if (e.key && e.newValue) {
+      hasReportedToken = false;
+      checkForToken();
+    }
+  });
+
+  true; // Required for injectedJavaScript to work properly
+})();
+`;
+
+interface TokenData {
+  type: string;
+  source?: string;
+  key?: string;
+  value?: string;
+  url?: string;
+  localStorageKeys?: string[];
+  sessionStorageKeys?: string[];
+  message?: string;
+  timestamp: number;
+}
+
+interface StoredToken {
+  token: string;
+  source: string;
+  key: string;
+  capturedAt: number;
+  expiresAt?: number;
+}
 
 export default function App() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [capturedTokens, setCapturedTokens] = useState<string[]>([]);
-  const [storedToken, setStoredToken] = useState<string | null>(null);
+  const [storedToken, setStoredToken] = useState<StoredToken | null>(null);
+  const [showWebView, setShowWebView] = useState(false);
+  const [debugMessages, setDebugMessages] = useState<string[]>([]);
+  const [currentUrl, setCurrentUrl] = useState<string>('');
+  const webViewRef = useRef<WebView>(null);
 
   useEffect(() => {
-    // Load stored token on app start (SPIKE-AUTH-A3)
     loadStoredToken();
   }, []);
 
+  const addDebugMessage = (message: string) => {
+    const timestamp = new Date().toLocaleTimeString();
+    setDebugMessages(prev => [`[${timestamp}] ${message}`, ...prev.slice(0, 19)]);
+    console.log(`[SPIKE-AUTH] ${message}`);
+  };
+
   const loadStoredToken = async () => {
     try {
-      const token = await AsyncStorage.getItem('dupr_auth_token');
-      if (token) {
-        console.log('[SPIKE-AUTH-A3] Loaded stored token from AsyncStorage:', token);
-        setStoredToken(token);
+      const tokenJson = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+      if (tokenJson) {
+        const token: StoredToken = JSON.parse(tokenJson);
+        addDebugMessage(`Loaded token from SecureStore (${token.source}:${token.key})`);
+
+        // Check if token is expired
+        if (token.expiresAt && Date.now() > token.expiresAt) {
+          addDebugMessage('Token expired, clearing');
+          await clearStoredToken();
+        } else {
+          setStoredToken(token);
+        }
+      } else {
+        addDebugMessage('No stored token found');
       }
     } catch (err) {
-      console.error('[SPIKE-AUTH-A3] Error loading token:', err);
+      addDebugMessage(`Error loading token: ${err}`);
+      setError(String(err));
+    } finally {
+      setIsLoading(false);
     }
   };
 
-  // JavaScript to inject into WebView for token capture (SPIKE-AUTH-A2)
-  const tokenCaptureScript = `
-    (function() {
-      console.log('[SPIKE-AUTH-A2] Token capture script loaded');
-      
-      // Capture localStorage tokens
-      const captureLocalStorage = () => {
-        try {
-          const keys = Object.keys(localStorage);
-          console.log('[SPIKE-AUTH-A2] localStorage keys:', keys);
-          keys.forEach(key => {
-            const value = localStorage.getItem(key);
-            if (value && (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth'))) {
-              console.log('[SPIKE-AUTH-A2] localStorage[' + key + ']:', value);
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'TOKEN_FOUND',
-                source: 'localStorage',
-                key: key,
-                value: value
-              }));
-            }
-          });
-        } catch (err) {
-          console.error('[SPIKE-AUTH-A2] localStorage error:', err);
-        }
-      };
-      
-      // Capture cookies
-      const captureCookies = () => {
-        try {
-          const cookies = document.cookie;
-          console.log('[SPIKE-AUTH-A2] All cookies:', cookies);
-          if (cookies) {
-            window.ReactNativeWebView.postMessage(JSON.stringify({
-              type: 'COOKIES_FOUND',
-              source: 'document.cookie',
-              value: cookies
-            }));
-          }
-        } catch (err) {
-          console.error('[SPIKE-AUTH-A2] Cookie error:', err);
-        }
-      };
-      
-      // Capture sessionStorage
-      const captureSessionStorage = () => {
-        try {
-          const keys = Object.keys(sessionStorage);
-          console.log('[SPIKE-AUTH-A2] sessionStorage keys:', keys);
-          keys.forEach(key => {
-            const value = sessionStorage.getItem(key);
-            if (value && (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth'))) {
-              console.log('[SPIKE-AUTH-A2] sessionStorage[' + key + ']:', value);
-              window.ReactNativeWebView.postMessage(JSON.stringify({
-                type: 'TOKEN_FOUND',
-                source: 'sessionStorage',
-                key: key,
-                value: value
-              }));
-            }
-          });
-        } catch (err) {
-          console.error('[SPIKE-AUTH-A2] sessionStorage error:', err);
-        }
-      };
-      
-      // Initial capture on page load
-      captureLocalStorage();
-      captureCookies();
-      captureSessionStorage();
-      
-      // Monitor for changes
-      const originalSetItem = Storage.prototype.setItem;
-      Storage.prototype.setItem = function(key, value) {
-        if (key.toLowerCase().includes('token') || key.toLowerCase().includes('auth')) {
-          console.log('[SPIKE-AUTH-A2] Storage update detected:', key, value);
-          window.ReactNativeWebView.postMessage(JSON.stringify({
-            type: 'TOKEN_FOUND',
-            source: 'storage_update',
-            key: key,
-            value: value
-          }));
-        }
-        return originalSetItem.apply(this, arguments);
-      };
-      
-      console.log('[SPIKE-AUTH-A2] Token capture monitoring active');
-    })();
-  `;
-
-  const handleLoadStart = () => {
-    console.log('[WebView] Loading started');
-    setIsLoading(true);
-    setError(null);
-  };
-
-  const handleLoadEnd = () => {
-    console.log('[WebView] Loading completed');
-    setIsLoading(false);
-  };
-
-  const handleError = (syntheticEvent: any) => {
-    const { nativeEvent } = syntheticEvent;
-    console.error('[WebView Error]', nativeEvent);
-    setError(nativeEvent.description);
-    setIsLoading(false);
-  };
-
-  const handleMessage = async (event: any) => {
+  const saveToken = async (tokenData: TokenData) => {
     try {
-      const message = JSON.parse(event.nativeEvent.data);
-      console.log('[SPIKE-AUTH-A2] Message received:', message);
-      
-      // Add to captured tokens list
-      const tokenInfo = `[${message.source}] ${message.key || ''}: ${message.value?.substring(0, 50)}...`;
-      setCapturedTokens(prev => [...prev, tokenInfo]);
-      
-      // Store token in AsyncStorage (SPIKE-AUTH-A3)
-      if (message.type === 'TOKEN_FOUND') {
-        try {
-          await AsyncStorage.setItem('dupr_auth_token', message.value);
-          await AsyncStorage.setItem('dupr_token_source', message.source);
-          await AsyncStorage.setItem('dupr_token_key', message.key || '');
-          console.log('[SPIKE-AUTH-A3] Token stored in AsyncStorage');
-          setStoredToken(message.value);
-        } catch (storageErr) {
-          console.error('[SPIKE-AUTH-A3] Error storing token:', storageErr);
-        }
+      if (!tokenData.value) {
+        addDebugMessage('No token value to save');
+        return;
       }
+
+      const token: StoredToken = {
+        token: tokenData.value,
+        source: tokenData.source || 'unknown',
+        key: tokenData.key || 'unknown',
+        capturedAt: Date.now(),
+        // JWT tokens typically expire, but we don't parse it here
+        // The app will handle 401 responses to detect expiration
+      };
+
+      await SecureStore.setItemAsync(TOKEN_STORAGE_KEY, JSON.stringify(token));
+      setStoredToken(token);
+      setShowWebView(false);
+      addDebugMessage(`Token saved to SecureStore (${token.key})`);
+      addDebugMessage(`Token preview: ${token.token.substring(0, 50)}...`);
     } catch (err) {
-      console.error('[WebView] Message parse error:', err);
+      addDebugMessage(`Error saving token: ${err}`);
+      setError(String(err));
     }
   };
 
   const clearStoredToken = async () => {
     try {
-      await AsyncStorage.removeItem('dupr_auth_token');
-      await AsyncStorage.removeItem('dupr_token_source');
-      await AsyncStorage.removeItem('dupr_token_key');
+      await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
       setStoredToken(null);
-      setCapturedTokens([]);
-      console.log('[SPIKE-AUTH-A3] Stored token cleared');
+      setDebugMessages([]);
+      addDebugMessage('Token cleared from SecureStore');
     } catch (err) {
-      console.error('[SPIKE-AUTH-A3] Error clearing token:', err);
+      addDebugMessage(`Error clearing token: ${err}`);
     }
   };
 
+  const handleWebViewMessage = (event: WebViewMessageEvent) => {
+    try {
+      const data: TokenData = JSON.parse(event.nativeEvent.data);
+
+      switch (data.type) {
+        case 'TOKEN_FOUND':
+          addDebugMessage(`TOKEN FOUND! Source: ${data.source}, Key: ${data.key}`);
+          saveToken(data);
+          break;
+
+        case 'PAGE_STATE':
+          addDebugMessage(`Page: ${data.url?.substring(0, 50)}...`);
+          if (data.localStorageKeys && data.localStorageKeys.length > 0) {
+            addDebugMessage(`localStorage keys: ${data.localStorageKeys.join(', ')}`);
+          }
+          break;
+
+        case 'NO_TOKEN_FOUND':
+          addDebugMessage(`No token found at: ${data.url?.substring(0, 50)}...`);
+          break;
+
+        case 'ERROR':
+          addDebugMessage(`WebView error: ${data.message}`);
+          break;
+
+        default:
+          addDebugMessage(`Unknown message type: ${data.type}`);
+      }
+    } catch (err) {
+      addDebugMessage(`Error parsing message: ${err}`);
+    }
+  };
+
+  const handleNavigationStateChange = (navState: { url: string; loading: boolean }) => {
+    setCurrentUrl(navState.url);
+    if (!navState.loading) {
+      addDebugMessage(`Navigated to: ${navState.url.substring(0, 60)}...`);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2196F3" />
+          <Text style={styles.loadingText}>Loading...</Text>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
+  if (showWebView) {
+    return (
+      <SafeAreaView style={styles.webViewContainer}>
+        <View style={styles.webViewHeader}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => setShowWebView(false)}
+          >
+            <Text style={styles.backButtonText}>Cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.webViewTitle} numberOfLines={1}>
+            {currentUrl ? currentUrl.replace('https://', '').substring(0, 30) : 'DUPR Login'}
+          </Text>
+          <View style={styles.placeholder} />
+        </View>
+
+        <WebView
+          ref={webViewRef}
+          source={{ uri: DUPR_LOGIN_URL }}
+          style={styles.webView}
+          injectedJavaScript={TOKEN_CAPTURE_SCRIPT}
+          onMessage={handleWebViewMessage}
+          onNavigationStateChange={handleNavigationStateChange}
+          javaScriptEnabled={true}
+          domStorageEnabled={true}
+          thirdPartyCookiesEnabled={true}
+          sharedCookiesEnabled={true}
+          startInLoadingState={true}
+          renderLoading={() => (
+            <View style={styles.webViewLoading}>
+              <ActivityIndicator size="large" color="#2196F3" />
+            </View>
+          )}
+          onError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            addDebugMessage(`WebView error: ${nativeEvent.description}`);
+          }}
+          onHttpError={(syntheticEvent) => {
+            const { nativeEvent } = syntheticEvent;
+            addDebugMessage(`HTTP error: ${nativeEvent.statusCode}`);
+          }}
+        />
+
+        {/* Debug console overlay */}
+        <View style={styles.debugOverlay}>
+          <Text style={styles.debugTitle}>Console ({debugMessages.length})</Text>
+          <ScrollView style={styles.debugScroll}>
+            {debugMessages.slice(0, 5).map((msg, i) => (
+              <Text key={i} style={styles.debugText}>{msg}</Text>
+            ))}
+          </ScrollView>
+        </View>
+      </SafeAreaView>
+    );
+  }
+
   return (
-    <View style={styles.container}>
+    <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerText}>DUPR WebView Test</Text>
-        <Text style={styles.subText}>Testing dashboard.dupr.com</Text>
+        <Text style={styles.headerText}>DUPR Auth Spike</Text>
+        <Text style={styles.subText}>WebView Token Capture Test</Text>
       </View>
 
       {storedToken && (
         <View style={styles.successContainer}>
-          <Text style={styles.successText}>✓ Token persisted in AsyncStorage</Text>
-          <Button title="Clear Token" onPress={clearStoredToken} color="#d32f2f" />
+          <Text style={styles.successText}>Token Captured Successfully</Text>
+          <View style={styles.tokenInfo}>
+            <Text style={styles.tokenLabel}>Source:</Text>
+            <Text style={styles.tokenValue}>{storedToken.source}:{storedToken.key}</Text>
+          </View>
+          <View style={styles.tokenInfo}>
+            <Text style={styles.tokenLabel}>Captured:</Text>
+            <Text style={styles.tokenValue}>
+              {new Date(storedToken.capturedAt).toLocaleString()}
+            </Text>
+          </View>
+          <View style={styles.tokenInfo}>
+            <Text style={styles.tokenLabel}>Preview:</Text>
+            <Text style={styles.tokenPreview}>
+              {storedToken.token.substring(0, 40)}...
+            </Text>
+          </View>
+          <TouchableOpacity
+            style={styles.clearButton}
+            onPress={clearStoredToken}
+          >
+            <Text style={styles.clearButtonText}>Clear Token</Text>
+          </TouchableOpacity>
         </View>
       )}
 
@@ -193,40 +418,53 @@ export default function App() {
         </View>
       )}
 
-      {capturedTokens.length > 0 && (
-        <View style={styles.capturedContainer}>
-          <Text style={styles.capturedTitle}>Captured Tokens ({capturedTokens.length}):</Text>
-          <ScrollView style={styles.tokensList}>
-            {capturedTokens.map((token, idx) => (
-              <Text key={idx} style={styles.tokenItem}>{idx + 1}. {token}</Text>
-            ))}
+      <ScrollView style={styles.content}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Test Instructions</Text>
+          <Text style={styles.instructions}>
+            1. Tap "Login to DUPR" button below{'\n'}
+            2. Login with your DUPR credentials{'\n'}
+            3. Wait for token capture (auto-detected){'\n'}
+            4. Token will be stored in SecureStore{'\n'}
+            5. Close and reopen app to verify persistence
+          </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Debug Console</Text>
+          <ScrollView style={styles.consoleContainer}>
+            {debugMessages.length === 0 ? (
+              <Text style={styles.consoleEmpty}>No messages yet</Text>
+            ) : (
+              debugMessages.map((msg, i) => (
+                <Text key={i} style={styles.consoleText}>{msg}</Text>
+              ))
+            )}
           </ScrollView>
         </View>
-      )}
 
-      {isLoading && (
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#0000ff" />
-          <Text style={styles.loadingText}>Loading DUPR Dashboard...</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Implementation Notes</Text>
+          <Text style={styles.notes}>
+            Using react-native-webview (embedded){'\n'}
+            Token stored in expo-secure-store (encrypted){'\n'}
+            JavaScript injection scans localStorage/sessionStorage{'\n'}
+            Monitors URL changes for SPA navigation
+          </Text>
         </View>
-      )}
+      </ScrollView>
 
-      <WebView
-        source={{ uri: 'https://dashboard.dupr.com' }}
-        style={styles.webview}
-        onLoadStart={handleLoadStart}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
-        onMessage={handleMessage}
-        injectedJavaScript={tokenCaptureScript}
-        startInLoadingState={true}
-        scalesPageToFit={true}
-        javaScriptEnabled={true}
-        domStorageEnabled={true}
-        mixedContentMode="always"
-        userAgent="Mozilla/5.0 (Linux; Android 9; Nexus 5) AppleWebKit/537.36"
-      />
-    </View>
+      <View style={styles.buttonContainer}>
+        <TouchableOpacity
+          style={[styles.loginButton, storedToken && styles.loginButtonSecondary]}
+          onPress={() => setShowWebView(true)}
+        >
+          <Text style={styles.loginButtonText}>
+            {storedToken ? 'Re-authenticate' : 'Login to DUPR'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </SafeAreaView>
   );
 }
 
@@ -235,15 +473,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 12,
+    fontSize: 16,
+    color: '#666',
+  },
   header: {
     backgroundColor: '#2196F3',
-    paddingTop: 40,
+    paddingTop: Platform.OS === 'android' ? 40 : 0,
     paddingHorizontal: 16,
     paddingBottom: 16,
     alignItems: 'center',
   },
   headerText: {
-    fontSize: 18,
+    fontSize: 20,
     fontWeight: 'bold',
     color: '#fff',
   },
@@ -254,65 +502,192 @@ const styles = StyleSheet.create({
   },
   successContainer: {
     backgroundColor: '#c8e6c9',
-    borderRadius: 4,
+    borderRadius: 8,
     margin: 12,
-    padding: 12,
+    padding: 16,
   },
   successText: {
     color: '#2e7d32',
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 12,
+  },
+  tokenInfo: {
+    flexDirection: 'row',
+    marginBottom: 4,
+  },
+  tokenLabel: {
+    color: '#1b5e20',
+    fontSize: 13,
+    fontWeight: '600',
+    width: 80,
+  },
+  tokenValue: {
+    color: '#2e7d32',
+    fontSize: 13,
+    flex: 1,
+  },
+  tokenPreview: {
+    color: '#1565c0',
+    fontSize: 11,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    flex: 1,
+  },
+  clearButton: {
+    marginTop: 12,
+    backgroundColor: '#d32f2f',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+  },
+  clearButtonText: {
+    color: '#fff',
+    fontWeight: '600',
   },
   errorContainer: {
     backgroundColor: '#ffebee',
-    borderRadius: 4,
+    borderRadius: 8,
     margin: 12,
-    padding: 12,
+    padding: 16,
   },
   errorText: {
     color: '#c62828',
     fontSize: 14,
   },
-  capturedContainer: {
-    backgroundColor: '#e3f2fd',
-    borderRadius: 4,
-    margin: 12,
-    padding: 12,
-    maxHeight: 120,
+  content: {
+    flex: 1,
+    paddingHorizontal: 16,
   },
-  capturedTitle: {
-    color: '#1565c0',
-    fontSize: 12,
+  section: {
+    backgroundColor: '#fff',
+    borderRadius: 8,
+    padding: 16,
+    marginTop: 12,
+    borderLeftWidth: 4,
+    borderLeftColor: '#2196F3',
+  },
+  sectionTitle: {
+    fontSize: 14,
     fontWeight: 'bold',
+    color: '#1565c0',
     marginBottom: 8,
   },
-  tokensList: {
-    marginBottom: 8,
+  instructions: {
+    fontSize: 13,
+    color: '#555',
+    lineHeight: 22,
   },
-  tokenItem: {
-    color: '#0d47a1',
+  notes: {
+    fontSize: 12,
+    color: '#666',
+    lineHeight: 20,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+  },
+  consoleContainer: {
+    maxHeight: 150,
+    backgroundColor: '#263238',
+    borderRadius: 4,
+    padding: 8,
+  },
+  consoleEmpty: {
+    color: '#78909c',
+    fontSize: 12,
+    fontStyle: 'italic',
+  },
+  consoleText: {
+    color: '#4fc3f7',
     fontSize: 11,
-    marginVertical: 2,
-    fontFamily: 'monospace',
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 4,
   },
-  loadingContainer: {
+  buttonContainer: {
+    padding: 16,
+    backgroundColor: '#fff',
+    borderTopWidth: 1,
+    borderTopColor: '#ddd',
+  },
+  loginButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  loginButtonSecondary: {
+    backgroundColor: '#1976D2',
+  },
+  loginButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+
+  // WebView styles
+  webViewContainer: {
+    flex: 1,
+    backgroundColor: '#fff',
+  },
+  webViewHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#2196F3',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 40 : 12,
+  },
+  backButton: {
+    padding: 4,
+  },
+  backButtonText: {
+    color: '#fff',
+    fontSize: 16,
+  },
+  webViewTitle: {
+    color: '#fff',
+    fontSize: 14,
+    flex: 1,
+    textAlign: 'center',
+    marginHorizontal: 8,
+  },
+  placeholder: {
+    width: 60,
+  },
+  webView: {
+    flex: 1,
+  },
+  webViewLoading: {
     position: 'absolute',
-    top: 180,
+    top: 0,
     left: 0,
     right: 0,
     bottom: 0,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-    zIndex: 1,
+    backgroundColor: '#fff',
   },
-  loadingText: {
-    marginTop: 12,
-    fontSize: 14,
-    color: '#666',
+  debugOverlay: {
+    position: 'absolute',
+    bottom: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    maxHeight: 120,
+    padding: 8,
   },
-  webview: {
-    flex: 1,
+  debugTitle: {
+    color: '#4fc3f7',
+    fontSize: 11,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  debugScroll: {
+    maxHeight: 90,
+  },
+  debugText: {
+    color: '#81d4fa',
+    fontSize: 10,
+    fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    marginBottom: 2,
   },
 });

@@ -1,0 +1,33 @@
+{
+  "name": "dupr-pickleball-scheduler",
+  "version": "1.0.0",
+  "description": "DUPR Pickleball Scheduler - Mobile and Core packages",
+  "private": true,
+  "workspaces": [
+    "packages/core",
+    "packages/mobile"
+  ],
+  "scripts": {
+    "build": "npm run build -w packages/core",
+    "test": "npm run test --workspaces --if-present",
+    "test:core": "npm run test -w packages/core",
+    "test:mobile": "npm run test -w packages/mobile",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "npm run clean --workspaces --if-present && rm -rf node_modules",
+    "android": "npm run android -w packages/mobile",
+    "ios": "npm run ios -w packages/mobile",
+    "start": "npm run start -w packages/mobile"
+  },
+  "keywords": [
+    "pickleball",
+    "dupr",
+    "scheduler",
+    "react-native",
+    "expo"
+  ],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@types/react": "~19.1.10"
+  }
+}

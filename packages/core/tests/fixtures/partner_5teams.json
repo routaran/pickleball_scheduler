@@ -1,0 +1,94 @@
+{
+  "name": "partner_5teams",
+  "description": "Partner DUPR fixture with 5 teams for realistic event size. Tests pool distribution and sorting by team rating.",
+  "game_type": "partner_dupr",
+  "input": [
+    "Player A / Player B",
+    "Player C / Player D",
+    "Player E / Player F",
+    "Player G / Player H",
+    "Player I / Player J"
+  ],
+  "teams": [
+    {
+      "player1": {
+        "name": "Player A",
+        "dupr_id": "PA001",
+        "rating": 4.80,
+        "found": true
+      },
+      "player2": {
+        "name": "Player B",
+        "dupr_id": "PB002",
+        "rating": 4.20,
+        "found": true
+      },
+      "team_rating": 4.41
+    },
+    {
+      "player1": {
+        "name": "Player C",
+        "dupr_id": "PC003",
+        "rating": 4.50,
+        "found": true
+      },
+      "player2": {
+        "name": "Player D",
+        "dupr_id": "PD004",
+        "rating": 3.80,
+        "found": true
+      },
+      "team_rating": 4.045
+    },
+    {
+      "player1": {
+        "name": "Player E",
+        "dupr_id": "PE005",
+        "rating": 4.00,
+        "found": true
+      },
+      "player2": {
+        "name": "Player F",
+        "dupr_id": "PF006",
+        "rating": 3.60,
+        "found": true
+      },
+      "team_rating": 3.74
+    },
+    {
+      "player1": {
+        "name": "Player G",
+        "dupr_id": "PG007",
+        "rating": 3.50,
+        "found": true
+      },
+      "player2": {
+        "name": "Player H",
+        "dupr_id": "PH008",
+        "rating": 3.20,
+        "found": true
+      },
+      "team_rating": 3.305
+    },
+    {
+      "player1": {
+        "name": "Player I",
+        "dupr_id": "PI009",
+        "rating": 3.00,
+        "found": true
+      },
+      "player2": {
+        "name": "Player J",
+        "dupr_id": "PJ010",
+        "rating": 2.80,
+        "found": true
+      },
+      "team_rating": 2.87
+    }
+  ],
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture",
+    "notes": "5 teams with varying skill levels. Team ratings calculated using 35% higher + 65% lower formula. Team 1: (0.35*4.80)+(0.65*4.20)=4.41. Team 2: (0.35*4.50)+(0.65*3.80)=4.045. Team 3: (0.35*4.00)+(0.65*3.60)=3.74. Team 4: (0.35*3.50)+(0.65*3.20)=3.305. Team 5: (0.35*3.00)+(0.65*2.80)=2.87."
+  }
+}

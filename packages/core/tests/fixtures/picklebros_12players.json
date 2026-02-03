@@ -1,0 +1,193 @@
+{
+  "name": "picklebros_12players",
+  "description": "PickleBros Monday format with 12 players distributed into 3 pools of 4. Tests pool distribution with three pools (A, B, C) where players are sorted by rating descending.",
+  "game_type": "picklebros_monday",
+  "input": [
+    "Alex Thompson",
+    "Rachel Green",
+    "Chris Anderson",
+    "Nicole White",
+    "Jason Lee",
+    "Stephanie Moore",
+    "Brandon Taylor",
+    "Megan Clark",
+    "Kevin Wright",
+    "Olivia Hall",
+    "Daniel Young",
+    "Samantha King"
+  ],
+  "pools": [
+    {
+      "pool_name": "A",
+      "players": [
+        {
+          "name": "Alex Thompson",
+          "dupr_id": "AT101",
+          "dupr_name": "Alexander Thompson",
+          "rating": 4.85,
+          "singles_rating": 4.70,
+          "doubles_rating": 4.85,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20001",
+          "found": true,
+          "search_method": "Last name + Alberta"
+        },
+        {
+          "name": "Rachel Green",
+          "dupr_id": "RG102",
+          "dupr_name": "Rachel Green",
+          "rating": 4.62,
+          "singles_rating": 4.45,
+          "doubles_rating": 4.62,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20002",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Chris Anderson",
+          "dupr_id": "CA103",
+          "dupr_name": "Christopher Anderson",
+          "rating": 4.45,
+          "singles_rating": 4.30,
+          "doubles_rating": 4.45,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20003",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Nicole White",
+          "dupr_id": "NW104",
+          "dupr_name": "Nicole M. White",
+          "rating": 4.28,
+          "singles_rating": 4.10,
+          "doubles_rating": 4.28,
+          "location": "Red Deer, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20004",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "notes": "Pool A - Highest rated pool with top 4 players (ratings 4.85, 4.62, 4.45, 4.28)"
+    },
+    {
+      "pool_name": "B",
+      "players": [
+        {
+          "name": "Jason Lee",
+          "dupr_id": "JL105",
+          "dupr_name": "Jason Lee",
+          "rating": 4.05,
+          "singles_rating": 3.90,
+          "doubles_rating": 4.05,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20005",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Stephanie Moore",
+          "dupr_id": "SM106",
+          "dupr_name": "Stephanie Moore",
+          "rating": 3.88,
+          "singles_rating": 3.75,
+          "doubles_rating": 3.88,
+          "location": "Spruce Grove, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20006",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Brandon Taylor",
+          "dupr_id": "BT107",
+          "dupr_name": "Brandon Taylor",
+          "rating": 3.72,
+          "singles_rating": 3.60,
+          "doubles_rating": 3.72,
+          "location": "Sherwood Park, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20007",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Megan Clark",
+          "dupr_id": "MC108",
+          "dupr_name": "Megan Clark",
+          "rating": 3.55,
+          "singles_rating": 3.40,
+          "doubles_rating": 3.55,
+          "location": "St. Albert, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20008",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "notes": "Pool B - Middle pool with players ranked 5-8 (ratings 4.05, 3.88, 3.72, 3.55)"
+    },
+    {
+      "pool_name": "C",
+      "players": [
+        {
+          "name": "Kevin Wright",
+          "dupr_id": "KW109",
+          "dupr_name": "Kevin Wright",
+          "rating": 3.42,
+          "singles_rating": 3.30,
+          "doubles_rating": 3.42,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20009",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Olivia Hall",
+          "dupr_id": "OH110",
+          "dupr_name": "Olivia Hall",
+          "rating": 3.28,
+          "singles_rating": 3.15,
+          "doubles_rating": 3.28,
+          "location": "Leduc, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20010",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Daniel Young",
+          "dupr_id": "DY111",
+          "dupr_name": "Daniel Young",
+          "rating": 3.12,
+          "singles_rating": 3.00,
+          "doubles_rating": 3.12,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20011",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Samantha King",
+          "dupr_id": "SK112",
+          "dupr_name": "Samantha King",
+          "rating": 2.95,
+          "singles_rating": 2.85,
+          "doubles_rating": 2.95,
+          "location": "Beaumont, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20012",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "notes": "Pool C - Lowest rated pool with players ranked 9-12 (ratings 3.42, 3.28, 3.12, 2.95)"
+    }
+  ],
+  "constraints": {
+    "players_per_pool": 4,
+    "minimum_pools": 2,
+    "total_players_must_be_multiple_of": 4
+  },
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "3-pool PickleBros scenario with 12 players. All players found in DUPR with various search methods. Demonstrates proper pool naming (A, B, C) and rating distribution across three pools. Tests nickname/substring matching for 'Alex' -> 'Alexander' and 'Chris' -> 'Christopher'."
+  }
+}

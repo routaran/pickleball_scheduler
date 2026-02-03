@@ -1,0 +1,62 @@
+{
+  "name": "partner_not_found",
+  "description": "Partner DUPR fixture with some players not found in DUPR. Tests default rating (3.0) application for unfound players.",
+  "game_type": "partner_dupr",
+  "input": [
+    "Known Player / Unknown Guest",
+    "Missing Person / Another Unknown",
+    "Found Player / Known Partner"
+  ],
+  "teams": [
+    {
+      "player1": {
+        "name": "Known Player",
+        "dupr_id": "KP001",
+        "rating": 4.50,
+        "found": true
+      },
+      "player2": {
+        "name": "Unknown Guest",
+        "dupr_id": null,
+        "rating": 3.0,
+        "found": false
+      },
+      "team_rating": 3.525
+    },
+    {
+      "player1": {
+        "name": "Missing Person",
+        "dupr_id": null,
+        "rating": 3.0,
+        "found": false
+      },
+      "player2": {
+        "name": "Another Unknown",
+        "dupr_id": null,
+        "rating": 3.0,
+        "found": false
+      },
+      "team_rating": 3.0
+    },
+    {
+      "player1": {
+        "name": "Found Player",
+        "dupr_id": "FP002",
+        "rating": 3.80,
+        "found": true
+      },
+      "player2": {
+        "name": "Known Partner",
+        "dupr_id": "KP003",
+        "rating": 3.50,
+        "found": true
+      },
+      "team_rating": 3.605
+    }
+  ],
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture",
+    "notes": "Tests handling of unfound players who receive default rating of 3.0. Team 1: one found (4.50), one not found (3.0 default), team rating = (0.35*4.50)+(0.65*3.0) = 1.575 + 1.95 = 3.525. Team 2: both not found (3.0 default each), team rating = (0.35*3.0)+(0.65*3.0) = 3.0. Team 3: both found, team rating = (0.35*3.80)+(0.65*3.50) = 1.33 + 2.275 = 3.605."
+  }
+}

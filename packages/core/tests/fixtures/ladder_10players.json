@@ -1,0 +1,214 @@
+{
+  "name": "ladder_10players_pool_distribution",
+  "description": "DUPR Ladder test with 10 players to validate pool distribution algorithm. Expected: 2 pools with target size 5 each. Tests sorting by rating and lower pools getting extra players.",
+  "game_type": "dupr_ladder",
+  "input": [
+    "Alex Turner",
+    "Brianna Costa",
+    "Carlos Mendez",
+    "Diana Park",
+    "Ethan Brooks",
+    "Fiona O'Brien",
+    "Gabriel Santos",
+    "Hannah Liu",
+    "Isaac Patel",
+    "Julia Martinez"
+  ],
+  "players": [
+    {
+      "name": "Alex Turner",
+      "dupr_id": "AT10001",
+      "dupr_name": "Alexander Turner",
+      "rating": 4.75,
+      "singles_rating": 4.60,
+      "doubles_rating": 4.75,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10001",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Brianna Costa",
+      "dupr_id": "BC10002",
+      "dupr_name": "Brianna Costa",
+      "rating": 4.50,
+      "singles_rating": 4.35,
+      "doubles_rating": 4.50,
+      "location": "Calgary, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10002",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Carlos Mendez",
+      "dupr_id": "CM10003",
+      "dupr_name": "Carlos A. Mendez",
+      "rating": 4.25,
+      "singles_rating": 4.10,
+      "doubles_rating": 4.25,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10003",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Diana Park",
+      "dupr_id": "DP10004",
+      "dupr_name": "Diana Park",
+      "rating": 4.00,
+      "singles_rating": 3.85,
+      "doubles_rating": 4.00,
+      "location": "Sherwood Park, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10004",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Ethan Brooks",
+      "dupr_id": "EB10005",
+      "dupr_name": "Ethan M. Brooks",
+      "rating": 3.80,
+      "singles_rating": 3.65,
+      "doubles_rating": 3.80,
+      "location": "St. Albert, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10005",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Fiona O'Brien",
+      "dupr_id": "FO10006",
+      "dupr_name": "Fiona O'Brien",
+      "rating": 3.60,
+      "singles_rating": null,
+      "doubles_rating": 3.60,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10006",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Gabriel Santos",
+      "dupr_id": "GS10007",
+      "dupr_name": "Gabriel Santos",
+      "rating": 3.40,
+      "singles_rating": 3.25,
+      "doubles_rating": 3.40,
+      "location": "Calgary, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10007",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Hannah Liu",
+      "dupr_id": "HL10008",
+      "dupr_name": "Hannah Liu",
+      "rating": 3.20,
+      "singles_rating": 3.05,
+      "doubles_rating": 3.20,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10008",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Isaac Patel",
+      "dupr_id": "IP10009",
+      "dupr_name": "Isaac K. Patel",
+      "rating": 3.00,
+      "singles_rating": null,
+      "doubles_rating": 3.00,
+      "location": "Red Deer, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10009",
+      "found": true,
+      "search_method": "Full name + Canada"
+    },
+    {
+      "name": "Julia Martinez",
+      "dupr_id": "JM10010",
+      "dupr_name": "Julia Martinez",
+      "rating": 2.80,
+      "singles_rating": 2.65,
+      "doubles_rating": 2.80,
+      "location": "Lethbridge, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/10010",
+      "found": true,
+      "search_method": "Full name + Canada"
+    }
+  ],
+  "expected_pools": [
+    {
+      "pool_name": "A",
+      "players": [
+        {
+          "name": "Alex Turner",
+          "rating": 4.75,
+          "rank": 1
+        },
+        {
+          "name": "Brianna Costa",
+          "rating": 4.50,
+          "rank": 2
+        },
+        {
+          "name": "Carlos Mendez",
+          "rating": 4.25,
+          "rank": 3
+        },
+        {
+          "name": "Diana Park",
+          "rating": 4.00,
+          "rank": 4
+        },
+        {
+          "name": "Ethan Brooks",
+          "rating": 3.80,
+          "rank": 5
+        }
+      ],
+      "notes": "Pool A contains highest rated 5 players"
+    },
+    {
+      "pool_name": "B",
+      "players": [
+        {
+          "name": "Fiona O'Brien",
+          "rating": 3.60,
+          "rank": 1
+        },
+        {
+          "name": "Gabriel Santos",
+          "rating": 3.40,
+          "rank": 2
+        },
+        {
+          "name": "Hannah Liu",
+          "rating": 3.20,
+          "rank": 3
+        },
+        {
+          "name": "Isaac Patel",
+          "rating": 3.00,
+          "rank": 4
+        },
+        {
+          "name": "Julia Martinez",
+          "rating": 2.80,
+          "rank": 5
+        }
+      ],
+      "notes": "Pool B contains lower rated 5 players"
+    }
+  ],
+  "pool_distribution_notes": {
+    "algorithm": "Players sorted by rating (highest first), then distributed to pools with target size 5",
+    "total_players": 10,
+    "num_pools": 2,
+    "distribution": "A=5, B=5 (even distribution with 10 players)"
+  },
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Tests pool distribution with 10 players. Validates target pool size of 5, sorting by rating, and even pool distribution. All players found with ratings spanning 2.80-4.75 range."
+  }
+}
