@@ -1,0 +1,46 @@
+{
+  "name": "partner_basic",
+  "description": "Basic Partner DUPR fixture with 2 teams, all players found. Tests standard team rating calculation.",
+  "game_type": "partner_dupr",
+  "input": [
+    "John Smith / Jane Doe",
+    "Bob Wilson / Alice Brown"
+  ],
+  "teams": [
+    {
+      "player1": {
+        "name": "John Smith",
+        "dupr_id": "ABC123",
+        "rating": 4.25,
+        "found": true
+      },
+      "player2": {
+        "name": "Jane Doe",
+        "dupr_id": "DEF456",
+        "rating": 3.75,
+        "found": true
+      },
+      "team_rating": 3.925
+    },
+    {
+      "player1": {
+        "name": "Bob Wilson",
+        "dupr_id": "GHI789",
+        "rating": 3.50,
+        "found": true
+      },
+      "player2": {
+        "name": "Alice Brown",
+        "dupr_id": "JKL012",
+        "rating": 3.25,
+        "found": true
+      },
+      "team_rating": 3.337
+    }
+  ],
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture",
+    "notes": "Team rating formula: 35% of higher rating + 65% of lower rating. Team 1: (0.35 * 4.25) + (0.65 * 3.75) = 1.4875 + 2.4375 = 3.925. Team 2: (0.35 * 3.50) + (0.65 * 3.25) = 1.225 + 2.1125 = 3.3375 rounded to 3.337"
+  }
+}

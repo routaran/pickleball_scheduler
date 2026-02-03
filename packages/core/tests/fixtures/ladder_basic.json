@@ -1,0 +1,76 @@
+{
+  "name": "ladder_basic_3players",
+  "description": "Basic DUPR Ladder test with 3 players, all found with valid DUPR ratings. Validates basic player lookup and single pool generation.",
+  "game_type": "dupr_ladder",
+  "input": [
+    "Sarah Mitchell",
+    "David Chen",
+    "Emma Rodriguez"
+  ],
+  "players": [
+    {
+      "name": "Sarah Mitchell",
+      "dupr_id": "SM12345",
+      "dupr_name": "Sarah A. Mitchell",
+      "rating": 4.25,
+      "singles_rating": 4.10,
+      "doubles_rating": 4.25,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/12345",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "David Chen",
+      "dupr_id": "DC67890",
+      "dupr_name": "David Chen",
+      "rating": 3.85,
+      "singles_rating": 3.70,
+      "doubles_rating": 3.85,
+      "location": "Calgary, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/67890",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Emma Rodriguez",
+      "dupr_id": "ER11223",
+      "dupr_name": "Emma L. Rodriguez",
+      "rating": 3.50,
+      "singles_rating": null,
+      "doubles_rating": 3.50,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/11223",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    }
+  ],
+  "expected_pools": [
+    {
+      "pool_name": "A",
+      "players": [
+        {
+          "name": "Sarah Mitchell",
+          "rating": 4.25,
+          "rank": 1
+        },
+        {
+          "name": "David Chen",
+          "rating": 3.85,
+          "rank": 2
+        },
+        {
+          "name": "Emma Rodriguez",
+          "rating": 3.50,
+          "rank": 3
+        }
+      ],
+      "notes": "Single pool with all 3 players (fewer than min pool size of 4)"
+    }
+  ],
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Basic test case for DUPR Ladder with all players found. Tests single pool edge case (fewer than 4 players)."
+  }
+}

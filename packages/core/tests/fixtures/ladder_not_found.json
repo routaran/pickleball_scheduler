@@ -1,0 +1,123 @@
+{
+  "name": "ladder_not_found_mix",
+  "description": "DUPR Ladder test with a mix of found and not-found players. Validates default rating (3.0) assignment for unresolved players and resolution summary display.",
+  "game_type": "dupr_ladder",
+  "input": [
+    "Michael Thompson",
+    "Unknown Player One",
+    "Jennifer Walsh",
+    "Fake Person XYZ",
+    "Robert Kim"
+  ],
+  "players": [
+    {
+      "name": "Michael Thompson",
+      "dupr_id": "MT44556",
+      "dupr_name": "Michael J. Thompson",
+      "rating": 4.15,
+      "singles_rating": 4.00,
+      "doubles_rating": 4.15,
+      "location": "Edmonton, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/44556",
+      "found": true,
+      "search_method": "Full name + Alberta"
+    },
+    {
+      "name": "Unknown Player One",
+      "dupr_id": null,
+      "dupr_name": null,
+      "rating": 3.0,
+      "singles_rating": null,
+      "doubles_rating": null,
+      "location": null,
+      "profile_url": null,
+      "found": false,
+      "search_method": "not_found"
+    },
+    {
+      "name": "Jennifer Walsh",
+      "dupr_id": "JW77889",
+      "dupr_name": "Jennifer Walsh",
+      "rating": 3.65,
+      "singles_rating": 3.50,
+      "doubles_rating": 3.65,
+      "location": "Red Deer, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/77889",
+      "found": true,
+      "search_method": "Full name + Canada"
+    },
+    {
+      "name": "Fake Person XYZ",
+      "dupr_id": null,
+      "dupr_name": null,
+      "rating": 3.0,
+      "singles_rating": null,
+      "doubles_rating": null,
+      "location": null,
+      "profile_url": null,
+      "found": false,
+      "search_method": "not_found"
+    },
+    {
+      "name": "Robert Kim",
+      "dupr_id": "RK99001",
+      "dupr_name": "Robert H. Kim",
+      "rating": 3.40,
+      "singles_rating": null,
+      "doubles_rating": 3.40,
+      "location": "Calgary, AB, CA",
+      "profile_url": "https://dashboard.dupr.com/dashboard/player/99001",
+      "found": true,
+      "search_method": "Last name + Alberta"
+    }
+  ],
+  "expected_pools": [
+    {
+      "pool_name": "A",
+      "players": [
+        {
+          "name": "Michael Thompson",
+          "rating": 4.15,
+          "rank": 1,
+          "found": true
+        },
+        {
+          "name": "Jennifer Walsh",
+          "rating": 3.65,
+          "rank": 2,
+          "found": true
+        },
+        {
+          "name": "Robert Kim",
+          "rating": 3.40,
+          "rank": 3,
+          "found": true
+        },
+        {
+          "name": "Unknown Player One",
+          "rating": 3.0,
+          "rank": 4,
+          "found": false
+        },
+        {
+          "name": "Fake Person XYZ",
+          "rating": 3.0,
+          "rank": 5,
+          "found": false
+        }
+      ],
+      "notes": "Single pool with 5 players; 2 unfound players at bottom with default 3.0 rating"
+    }
+  ],
+  "resolution_summary": {
+    "total_players": 5,
+    "resolved_players": 3,
+    "unresolved_players": ["Unknown Player One", "Fake Person XYZ"],
+    "default_rating_used": 3.0
+  },
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Tests not-found player handling. Unfound players receive default rating of 3.0 (per FEATURE_PARITY.md: DEFAULT_RATING = 2.5, but this fixture uses 3.0 as a common default). Validates resolution summary warning display."
+  }
+}

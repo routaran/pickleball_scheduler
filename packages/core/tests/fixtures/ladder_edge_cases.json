@@ -1,0 +1,321 @@
+{
+  "name": "ladder_edge_cases",
+  "description": "DUPR Ladder edge case tests: whitespace handling, duplicate names, and single player scenarios. Validates input parsing and edge case handling.",
+  "game_type": "dupr_ladder",
+  "test_cases": [
+    {
+      "name": "whitespace_handling",
+      "description": "Tests that leading/trailing whitespace is trimmed from player names",
+      "input": [
+        "  John Smith  ",
+        "Jane Doe",
+        "   Leading Spaces",
+        "Trailing Spaces   "
+      ],
+      "expected_parsed_names": [
+        "John Smith",
+        "Jane Doe",
+        "Leading Spaces",
+        "Trailing Spaces"
+      ],
+      "players": [
+        {
+          "name": "John Smith",
+          "dupr_id": "JS20001",
+          "dupr_name": "John Smith",
+          "rating": 3.95,
+          "singles_rating": 3.80,
+          "doubles_rating": 3.95,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20001",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Jane Doe",
+          "dupr_id": "JD20002",
+          "dupr_name": "Jane Doe",
+          "rating": 3.75,
+          "singles_rating": 3.60,
+          "doubles_rating": 3.75,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/20002",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Leading Spaces",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "not_found"
+        },
+        {
+          "name": "Trailing Spaces",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "not_found"
+        }
+      ],
+      "expected_pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            { "name": "John Smith", "rating": 3.95, "rank": 1 },
+            { "name": "Jane Doe", "rating": 3.75, "rank": 2 },
+            { "name": "Leading Spaces", "rating": 3.0, "rank": 3 },
+            { "name": "Trailing Spaces", "rating": 3.0, "rank": 4 }
+          ]
+        }
+      ],
+      "notes": "Whitespace should be trimmed before lookup. Names after trimming should match DUPR records."
+    },
+    {
+      "name": "duplicate_names",
+      "description": "Tests handling of duplicate player names in input",
+      "input": [
+        "John Smith",
+        "Jane Doe",
+        "John Smith",
+        "Bob Johnson"
+      ],
+      "players": [
+        {
+          "name": "John Smith",
+          "dupr_id": "JS30001",
+          "dupr_name": "John Smith",
+          "rating": 4.10,
+          "singles_rating": 3.95,
+          "doubles_rating": 4.10,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30001",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Jane Doe",
+          "dupr_id": "JD30002",
+          "dupr_name": "Jane M. Doe",
+          "rating": 3.85,
+          "singles_rating": 3.70,
+          "doubles_rating": 3.85,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30002",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "John Smith",
+          "dupr_id": "JS30001",
+          "dupr_name": "John Smith",
+          "rating": 4.10,
+          "singles_rating": 3.95,
+          "doubles_rating": 4.10,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30001",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Bob Johnson",
+          "dupr_id": "BJ30003",
+          "dupr_name": "Robert Johnson",
+          "rating": 3.50,
+          "singles_rating": null,
+          "doubles_rating": 3.50,
+          "location": "Red Deer, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30003",
+          "found": true,
+          "search_method": "Last name + Alberta"
+        }
+      ],
+      "expected_pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            { "name": "John Smith", "rating": 4.10, "rank": 1 },
+            { "name": "John Smith", "rating": 4.10, "rank": 2 },
+            { "name": "Jane Doe", "rating": 3.85, "rank": 3 },
+            { "name": "Bob Johnson", "rating": 3.50, "rank": 4 }
+          ]
+        }
+      ],
+      "notes": "Duplicate names are processed individually - API lookup may return same player. Both entries appear in pool sorted by rating."
+    },
+    {
+      "name": "single_player",
+      "description": "Tests edge case with only one player in the input",
+      "input": [
+        "Solo Player"
+      ],
+      "players": [
+        {
+          "name": "Solo Player",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "not_found"
+        }
+      ],
+      "expected_pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            { "name": "Solo Player", "rating": 3.0, "rank": 1 }
+          ],
+          "notes": "Single player forms Pool A with just one member"
+        }
+      ],
+      "notes": "Single player input should still generate valid pool structure with one pool containing one player."
+    },
+    {
+      "name": "empty_lines_handling",
+      "description": "Tests that empty lines are properly skipped during parsing",
+      "input": [
+        "Player One",
+        "",
+        "Player Two",
+        "   ",
+        "Player Three"
+      ],
+      "expected_parsed_names": [
+        "Player One",
+        "Player Two",
+        "Player Three"
+      ],
+      "players": [
+        {
+          "name": "Player One",
+          "dupr_id": "P1_40001",
+          "dupr_name": "Player One",
+          "rating": 3.80,
+          "singles_rating": 3.65,
+          "doubles_rating": 3.80,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/40001",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Player Two",
+          "dupr_id": "P2_40002",
+          "dupr_name": "Player Two",
+          "rating": 3.55,
+          "singles_rating": 3.40,
+          "doubles_rating": 3.55,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/40002",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Player Three",
+          "dupr_id": "P3_40003",
+          "dupr_name": "Player Three",
+          "rating": 3.30,
+          "singles_rating": null,
+          "doubles_rating": 3.30,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/40003",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "expected_pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            { "name": "Player One", "rating": 3.80, "rank": 1 },
+            { "name": "Player Two", "rating": 3.55, "rank": 2 },
+            { "name": "Player Three", "rating": 3.30, "rank": 3 }
+          ]
+        }
+      ],
+      "notes": "Empty lines and whitespace-only lines should be skipped. Only 3 valid player names parsed."
+    },
+    {
+      "name": "guest_marker_handling",
+      "description": "Tests that guest markers like (G) are handled during name cleaning",
+      "input": [
+        "John Smith (G)",
+        "Jane Doe (Guest)",
+        "Regular Player"
+      ],
+      "expected_cleaned_names": [
+        "John Smith",
+        "Jane Doe",
+        "Regular Player"
+      ],
+      "players": [
+        {
+          "name": "John Smith (G)",
+          "dupr_id": "JS50001",
+          "dupr_name": "John Smith",
+          "rating": 4.05,
+          "singles_rating": 3.90,
+          "doubles_rating": 4.05,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/50001",
+          "found": true,
+          "search_method": "Full name + Alberta (guest marker cleaned)"
+        },
+        {
+          "name": "Jane Doe (Guest)",
+          "dupr_id": "JD50002",
+          "dupr_name": "Jane Doe",
+          "rating": 3.70,
+          "singles_rating": 3.55,
+          "doubles_rating": 3.70,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/50002",
+          "found": true,
+          "search_method": "Full name + Alberta (guest marker cleaned)"
+        },
+        {
+          "name": "Regular Player",
+          "dupr_id": "RP50003",
+          "dupr_name": "Regular Player",
+          "rating": 3.45,
+          "singles_rating": null,
+          "doubles_rating": 3.45,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/50003",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "expected_pools": [
+        {
+          "pool_name": "A",
+          "players": [
+            { "name": "John Smith (G)", "rating": 4.05, "rank": 1 },
+            { "name": "Jane Doe (Guest)", "rating": 3.70, "rank": 2 },
+            { "name": "Regular Player", "rating": 3.45, "rank": 3 }
+          ]
+        }
+      ],
+      "notes": "Guest markers (G), (g), (Guest) are stripped before DUPR lookup but original names preserved in output."
+    }
+  ],
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Comprehensive edge case tests for DUPR Ladder. Covers: whitespace trimming, duplicate name handling, single player pools, empty line skipping, and guest marker cleaning. Default rating of 3.0 used for not-found players."
+  }
+}

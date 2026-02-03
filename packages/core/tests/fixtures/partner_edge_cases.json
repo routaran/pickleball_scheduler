@@ -1,0 +1,82 @@
+{
+  "name": "partner_edge_cases",
+  "description": "Partner DUPR fixture testing edge cases: whitespace around delimiter, no spaces around delimiter, extra spaces in names, and equal ratings.",
+  "game_type": "partner_dupr",
+  "input": [
+    "  John Smith  /  Jane Doe  ",
+    "Bob Johnson/Alice Anderson",
+    "Charlie   Brown / Diana    Prince",
+    "Equal Rating A / Equal Rating B"
+  ],
+  "teams": [
+    {
+      "player1": {
+        "name": "John Smith",
+        "dupr_id": "JS001",
+        "rating": 4.00,
+        "found": true
+      },
+      "player2": {
+        "name": "Jane Doe",
+        "dupr_id": "JD002",
+        "rating": 3.50,
+        "found": true
+      },
+      "team_rating": 3.675,
+      "notes": "Tests whitespace trimming around names and delimiter"
+    },
+    {
+      "player1": {
+        "name": "Bob Johnson",
+        "dupr_id": "BJ003",
+        "rating": 3.80,
+        "found": true
+      },
+      "player2": {
+        "name": "Alice Anderson",
+        "dupr_id": "AA004",
+        "rating": 3.20,
+        "found": true
+      },
+      "team_rating": 3.41,
+      "notes": "Tests no space around delimiter (Player1/Player2)"
+    },
+    {
+      "player1": {
+        "name": "Charlie Brown",
+        "dupr_id": "CB005",
+        "rating": 3.60,
+        "found": true
+      },
+      "player2": {
+        "name": "Diana Prince",
+        "dupr_id": "DP006",
+        "rating": 3.40,
+        "found": true
+      },
+      "team_rating": 3.47,
+      "notes": "Tests internal whitespace normalization in names"
+    },
+    {
+      "player1": {
+        "name": "Equal Rating A",
+        "dupr_id": "ERA007",
+        "rating": 3.50,
+        "found": true
+      },
+      "player2": {
+        "name": "Equal Rating B",
+        "dupr_id": "ERB008",
+        "rating": 3.50,
+        "found": true
+      },
+      "team_rating": 3.5,
+      "notes": "Tests equal ratings: (0.35*3.50)+(0.65*3.50) = 3.50"
+    }
+  ],
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture",
+    "notes": "Edge cases for Partner DUPR parsing. Team 1: (0.35*4.00)+(0.65*3.50)=3.675. Team 2: (0.35*3.80)+(0.65*3.20)=3.41. Team 3: (0.35*3.60)+(0.65*3.40)=3.47. Team 4: equal ratings result in same value (0.35+0.65=1.0, so rating*1.0=rating)."
+  }
+}

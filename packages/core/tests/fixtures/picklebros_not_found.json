@@ -1,0 +1,146 @@
+{
+  "name": "picklebros_not_found",
+  "description": "PickleBros Monday format with 8 players where some players are not found in DUPR and receive the default rating of 3.0. Tests fallback behavior and proper handling of unresolved players.",
+  "game_type": "picklebros_monday",
+  "input": [
+    "Emma Wilson",
+    "James Smith",
+    "Unknown Guest Player",
+    "Visiting Friend (G)",
+    "Tyler Jackson",
+    "Ashley Robinson",
+    "New Player Here",
+    "Local Beginner"
+  ],
+  "pools": [
+    {
+      "pool_name": "A",
+      "players": [
+        {
+          "name": "Emma Wilson",
+          "dupr_id": "EW301",
+          "dupr_name": "Emma Wilson",
+          "rating": 4.35,
+          "singles_rating": 4.20,
+          "doubles_rating": 4.35,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30001",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "James Smith",
+          "dupr_id": "JS302",
+          "dupr_name": "James Smith",
+          "rating": 4.12,
+          "singles_rating": 4.00,
+          "doubles_rating": 4.12,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30002",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Tyler Jackson",
+          "dupr_id": "TJ303",
+          "dupr_name": "Tyler Jackson",
+          "rating": 3.78,
+          "singles_rating": 3.65,
+          "doubles_rating": 3.78,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30003",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Ashley Robinson",
+          "dupr_id": "AR304",
+          "dupr_name": "Ashley Robinson",
+          "rating": 3.55,
+          "singles_rating": 3.40,
+          "doubles_rating": 3.55,
+          "location": "Red Deer, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/30004",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "notes": "Pool A - Contains 4 found players with highest ratings"
+    },
+    {
+      "pool_name": "B",
+      "players": [
+        {
+          "name": "Unknown Guest Player",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "Default (player not found)"
+        },
+        {
+          "name": "Visiting Friend (G)",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "Default (player not found)"
+        },
+        {
+          "name": "New Player Here",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "Default (player not found)"
+        },
+        {
+          "name": "Local Beginner",
+          "dupr_id": null,
+          "dupr_name": null,
+          "rating": 3.0,
+          "singles_rating": null,
+          "doubles_rating": null,
+          "location": null,
+          "profile_url": null,
+          "found": false,
+          "search_method": "Default (player not found)"
+        }
+      ],
+      "notes": "Pool B - Contains 4 unfound players, all assigned default rating 3.0. Note: Guest marker (G) is cleaned before lookup but player still not found."
+    }
+  ],
+  "constraints": {
+    "players_per_pool": 4,
+    "minimum_pools": 2,
+    "total_players_must_be_multiple_of": 4
+  },
+  "resolution_summary": {
+    "total_players": 8,
+    "resolved_players": 4,
+    "unresolved_players": [
+      "Unknown Guest Player",
+      "Visiting Friend (G)",
+      "New Player Here",
+      "Local Beginner"
+    ],
+    "default_rating_used": 3.0
+  },
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Tests handling of players not found in DUPR. Default rating of 3.0 is applied to unfound players. Guest marker (G) removal is tested with 'Visiting Friend (G)'. All unfound players end up in Pool B due to having lower (default) ratings than found players. This fixture validates the resolution summary display and proper handling of null DUPR fields."
+  }
+}

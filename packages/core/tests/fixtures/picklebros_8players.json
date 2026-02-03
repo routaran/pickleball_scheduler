@@ -1,0 +1,135 @@
+{
+  "name": "picklebros_8players",
+  "description": "PickleBros Monday format with 8 players distributed into 2 pools of 4. Tests basic pool distribution where players are sorted by rating and split evenly into Pool A (highest rated) and Pool B (lower rated).",
+  "game_type": "picklebros_monday",
+  "input": [
+    "Marcus Chen",
+    "Sarah Williams",
+    "David Kim",
+    "Jennifer Lopez",
+    "Michael Brown",
+    "Emily Davis",
+    "Robert Johnson",
+    "Amanda Martinez"
+  ],
+  "pools": [
+    {
+      "pool_name": "A",
+      "players": [
+        {
+          "name": "Marcus Chen",
+          "dupr_id": "MC001",
+          "dupr_name": "Marcus Chen",
+          "rating": 4.52,
+          "singles_rating": 4.35,
+          "doubles_rating": 4.52,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10001",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Sarah Williams",
+          "dupr_id": "SW002",
+          "dupr_name": "Sarah A. Williams",
+          "rating": 4.28,
+          "singles_rating": 4.10,
+          "doubles_rating": 4.28,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10002",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "David Kim",
+          "dupr_id": "DK003",
+          "dupr_name": "David Kim",
+          "rating": 4.15,
+          "singles_rating": 3.95,
+          "doubles_rating": 4.15,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10003",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Jennifer Lopez",
+          "dupr_id": "JL004",
+          "dupr_name": "Jennifer Lopez",
+          "rating": 3.98,
+          "singles_rating": 3.85,
+          "doubles_rating": 3.98,
+          "location": "Red Deer, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10004",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "notes": "Pool A - Highest rated pool with top 4 players (ratings 4.52, 4.28, 4.15, 3.98)"
+    },
+    {
+      "pool_name": "B",
+      "players": [
+        {
+          "name": "Michael Brown",
+          "dupr_id": "MB005",
+          "dupr_name": "Michael J. Brown",
+          "rating": 3.75,
+          "singles_rating": 3.60,
+          "doubles_rating": 3.75,
+          "location": "Edmonton, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10005",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Emily Davis",
+          "dupr_id": "ED006",
+          "dupr_name": "Emily Davis",
+          "rating": 3.62,
+          "singles_rating": 3.50,
+          "doubles_rating": 3.62,
+          "location": "Calgary, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10006",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Robert Johnson",
+          "dupr_id": "RJ007",
+          "dupr_name": "Robert Johnson",
+          "rating": 3.45,
+          "singles_rating": 3.30,
+          "doubles_rating": 3.45,
+          "location": "Sherwood Park, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10007",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        },
+        {
+          "name": "Amanda Martinez",
+          "dupr_id": "AM008",
+          "dupr_name": "Amanda Martinez",
+          "rating": 3.28,
+          "singles_rating": 3.15,
+          "doubles_rating": 3.28,
+          "location": "St. Albert, AB, CA",
+          "profile_url": "https://dashboard.dupr.com/dashboard/player/10008",
+          "found": true,
+          "search_method": "Full name + Alberta"
+        }
+      ],
+      "notes": "Pool B - Second pool with remaining 4 players (ratings 3.75, 3.62, 3.45, 3.28)"
+    }
+  ],
+  "constraints": {
+    "players_per_pool": 4,
+    "minimum_pools": 2,
+    "total_players_must_be_multiple_of": 4
+  },
+  "metadata": {
+    "captured_at": "2026-02-01T12:00:00",
+    "source": "manual_fixture_creation",
+    "notes": "Basic 2-pool PickleBros scenario. All 8 players found in DUPR. Pool A contains highest 4 rated players, Pool B contains lower 4 rated players. Each pool has exactly 4 players as required by PickleBros Monday format."
+  }
+}

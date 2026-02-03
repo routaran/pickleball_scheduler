@@ -1,0 +1,22 @@
+{
+  "expo": {
+    "name": "DUPR Print Test",
+    "slug": "dupr-print-test",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.dupr.printtest"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#9c27b0"
+      },
+      "package": "com.dupr.printtest"
+    }
+  }
+}

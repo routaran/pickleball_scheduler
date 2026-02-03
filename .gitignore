@@ -54,3 +54,21 @@ curl.*
 *.url
 *.gameTypes
 config/player_registry.json
+cmdline-tools
+
+# Node.js
+node_modules/
+
+# Expo
+.expo/
+
+# Test coverage
+coverage/
+
+# Android SDK
+android-sdk-root/
+
+# Generated/temp files
+.knownPackages
+error.txt
+*.png
