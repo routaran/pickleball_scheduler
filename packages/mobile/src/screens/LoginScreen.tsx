@@ -5,6 +5,31 @@ import { AuthService } from '../services/authService';
 
 const DUPR_LOGIN_URL = 'https://dashboard.dupr.com/login';
 
+// JavaScript to clear DUPR's localStorage before the page loads
+// Only clears on the login page to ensure a clean slate after logout
+// Does NOT clear on dashboard/other pages so we don't lose the token after login
+const CLEAR_STORAGE_JS = `
+(function() {
+  var url = window.location.href || '';
+  var path = window.location.pathname || '';
+
+  // Only clear storage on the login page
+  var isLoginPage = path === '/login' || url.indexOf('/login') !== -1;
+
+  if (isLoginPage) {
+    try {
+      localStorage.removeItem('persist:root');
+      console.log('[CLEAR-STORAGE] Cleared persist:root from localStorage (on login page)');
+    } catch (e) {
+      console.log('[CLEAR-STORAGE] Error clearing localStorage: ' + e.message);
+    }
+  } else {
+    console.log('[CLEAR-STORAGE] Skipping clear - not on login page: ' + path);
+  }
+  true;
+})();
+`;
+
 // JavaScript to inject into WebView to capture authentication tokens
 const TOKEN_CAPTURE_JS = `
 (function() {
@@ -394,6 +419,7 @@ export function LoginScreen() {
           ref={webViewRef}
           source={{ uri: DUPR_LOGIN_URL }}
           style={styles.webView}
+          injectedJavaScriptBeforeContentLoaded={CLEAR_STORAGE_JS}
           injectedJavaScript={TOKEN_CAPTURE_JS}
           onMessage={handleWebViewMessage}
           onNavigationStateChange={handleNavigationStateChange}
