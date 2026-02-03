@@ -5,6 +5,7 @@ import {
   PlayerWithRating,
   TeamWithRatings,
   PlayerPool,
+  TeamPool,
   distributePlayersToPool,
   distributePlayersToPickleBrosPools,
   distributeTeamsToPool,
@@ -24,6 +25,7 @@ interface ParsedGame {
   players: PlayerWithRating[];
   teams?: TeamWithRatings[];
   pools?: PlayerPool[];
+  teamPools?: TeamPool[];
 }
 
 /** Status of an individual player search */
@@ -155,6 +157,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Recalculate pools/teams based on format
     let updatedPools: PlayerPool[] | undefined;
     let updatedTeams: TeamWithRatings[] | undefined;
+    let updatedTeamPools: TeamPool[] | undefined;
     let updatedHtml: string | null = state.html;
 
     if (state.format === GameType.DUPR_LADDER) {
@@ -178,6 +181,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           teamRating: calculateTeamRating(p1.rating, p2.rating),
         };
       });
+      // Recalculate team pools based on updated team ratings
+      updatedTeamPools = distributeTeamsToPool(updatedTeams);
       updatedHtml = generatePartnerDuprHtml(updatedTeams);
     }
 
@@ -189,6 +194,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         players: updatedPlayers,
         pools: updatedPools,
         teams: updatedTeams ?? state.results.teams,
+        teamPools: updatedTeamPools ?? state.results.teamPools,
       },
       html: updatedHtml,
     });
@@ -210,6 +216,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     // Recalculate pools/teams based on format
     let updatedPools: PlayerPool[] | undefined;
     let updatedTeams: TeamWithRatings[] | undefined;
+    let updatedTeamPools: TeamPool[] | undefined;
     let updatedHtml: string | null = state.html;
 
     if (state.format === GameType.DUPR_LADDER) {
@@ -232,6 +239,8 @@ export const useGameStore = create<GameState>((set, get) => ({
           teamRating: calculateTeamRating(p1.rating, p2.rating),
         };
       });
+      // Recalculate team pools based on updated team ratings
+      updatedTeamPools = distributeTeamsToPool(updatedTeams);
       updatedHtml = generatePartnerDuprHtml(updatedTeams);
     }
 
@@ -243,6 +252,7 @@ export const useGameStore = create<GameState>((set, get) => ({
         players: updatedPlayers,
         pools: updatedPools,
         teams: updatedTeams ?? state.results.teams,
+        teamPools: updatedTeamPools ?? state.results.teamPools,
       },
       html: updatedHtml,
     });

@@ -2,7 +2,7 @@ import React, { useState, useCallback } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useGameStore } from '../stores/gameStore';
 import { useAuthStore } from '../stores/authStore';
-import { GameType } from '@dupr/core';
+import { GameType, distributeTeamsToPool, distributePlayersToPool } from '@dupr/core';
 import { PlayerInputScreen } from './PlayerInputScreen';
 import { GameService } from '../services/gameService';
 import { useNavigation } from '@react-navigation/native';
@@ -81,13 +81,16 @@ export function GameScreen() {
 
       // Store results in gameStore
       console.log('[GameScreen] Setting results...');
-      const pools = result.teams ? undefined : getPools(result.players);
+      const pools = result.teams ? undefined : distributePlayersToPool(result.players);
+      const teamPools = result.teams ? distributeTeamsToPool(result.teams) : undefined;
       console.log('[GameScreen] Pools calculated:', pools ? pools.length : 'none');
+      console.log('[GameScreen] Team pools calculated:', teamPools ? teamPools.length : 'none');
 
       setResults({
         players: result.players,
         teams: result.teams,
         pools: pools,
+        teamPools: teamPools,
       });
       console.log('[GameScreen] Results set successfully');
 
@@ -107,28 +110,6 @@ export function GameScreen() {
       setSearchProgress(null);
     }
   }, [token, format, inputText, setResults, setHtml, setProcessing, setError, setSearchProgress, navigation]);
-
-  // Helper function to extract pools from players
-  // This is a temporary solution until we refactor the core library to return pools directly
-  const getPools = (players: { rating: number; [key: string]: unknown }[]) => {
-    // Simple grouping by rating range for now
-    // This should ideally use the distributePlayersToPool function from core
-    const sorted = [...players].sort((a, b) => b.rating - a.rating);
-    const poolSize = 5;
-    const numPools = Math.ceil(sorted.length / poolSize);
-
-    const pools = [];
-    for (let i = 0; i < numPools; i++) {
-      const poolName = String.fromCharCode(65 + i); // A, B, C, D...
-      const start = i * poolSize;
-      const end = Math.min(start + poolSize, sorted.length);
-      pools.push({
-        name: poolName,
-        players: sorted.slice(start, end),
-      });
-    }
-    return pools;
-  };
 
   // If format is selected and user wants to input players, show PlayerInputScreen
   if (showInput && format) {
