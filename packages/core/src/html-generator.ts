@@ -34,6 +34,49 @@ export interface TeamPool {
 }
 
 // =============================================================================
+// Court-Based Distribution Types
+// =============================================================================
+
+/** Error codes for court distribution validation failures */
+export type CourtDistributionErrorCode =
+  | 'TOO_FEW_PLAYERS'
+  | 'TOO_MANY_PLAYERS'
+  | 'INVALID_COURT_COUNT';
+
+/** Successful court distribution result */
+export interface CourtDistributionSuccess<T> {
+  success: true;
+  pools: T[];
+}
+
+/** Failed court distribution result with error details */
+export interface CourtDistributionError {
+  success: false;
+  error: {
+    code: CourtDistributionErrorCode;
+    message: string;
+    details: {
+      entityCount: number;
+      courtCount: number;
+      minRequired?: number;
+      maxAllowed?: number;
+    };
+  };
+}
+
+/** Discriminated union for court distribution results */
+export type CourtDistributionResult<T> =
+  | CourtDistributionSuccess<T>
+  | CourtDistributionError;
+
+/** Configuration for court-based distribution */
+export interface CourtDistributionConfig {
+  minPerPool: number;     // Default: 4
+  maxPerPool: number;     // Default: 5
+  courtsPerPool: number;  // DUPR Ladder: 1, Partner DUPR: 2
+}
+
+// =============================================================================
 // Constants
 // =============================================================================
 
@@ -42,18 +85,286 @@ export interface TeamPool {
 // - 5 players/teams per pool = acceptable (1 bye per round)
 export const POOL_TARGET_SIZE = 4;
 export const POOL_MIN_SIZE = 4;
+export const POOL_MAX_SIZE = 5;
 export const PICKLEBROS_POOL_SIZE = 4;
+
+// Courts per pool by game format
+export const COURTS_PER_POOL_LADDER = 1;   // 1 court = 1 pool for DUPR Ladder
+export const COURTS_PER_POOL_PARTNER = 2;  // 2 courts = 1 pool for Partner DUPR
+
+/** Default configuration for DUPR Ladder (1 court per pool) */
+export const DEFAULT_LADDER_CONFIG: CourtDistributionConfig = {
+  minPerPool: POOL_MIN_SIZE,
+  maxPerPool: POOL_MAX_SIZE,
+  courtsPerPool: COURTS_PER_POOL_LADDER,
+};
+
+/** Default configuration for Partner DUPR (2 courts per pool) */
+export const DEFAULT_PARTNER_CONFIG: CourtDistributionConfig = {
+  minPerPool: POOL_MIN_SIZE,
+  maxPerPool: POOL_MAX_SIZE,
+  courtsPerPool: COURTS_PER_POOL_PARTNER,
+};
 
 // Rating tier thresholds
 export const RATING_TIER_HIGH = 4.0;
 export const RATING_TIER_MID = 3.0;
 
 // =============================================================================
-// Pool Distribution
+// Court-Based Distribution Functions
 // =============================================================================
 
 /**
- * Distribute players into pools
+ * Calculate number of pools from court count.
+ * Validates court count and returns pool count or throws.
+ *
+ * @param courtCount - Number of courts available
+ * @param courtsPerPool - Courts required per pool (1 for Ladder, 2 for Partner)
+ * @returns Number of pools
+ * @throws Error if court count is invalid
+ */
+export function getPoolCount(courtCount: number, courtsPerPool: number): number {
+  if (!Number.isInteger(courtCount) || courtCount <= 0) {
+    throw new Error('Court count must be a positive whole number');
+  }
+  if (courtCount % courtsPerPool !== 0) {
+    throw new Error(`Court count must be a multiple of ${courtsPerPool}`);
+  }
+  return courtCount / courtsPerPool;
+}
+
+/**
+ * Validate court distribution parameters.
+ * Checks court count validity and entity count against pool capacity.
+ *
+ * @param entityCount - Number of players or teams to distribute
+ * @param courtCount - Number of courts available
+ * @param config - Distribution configuration
+ * @returns Success or error result
+ */
+export function validateCourtDistribution(
+  entityCount: number,
+  courtCount: number,
+  config: CourtDistributionConfig
+): CourtDistributionResult<never> {
+  // Validate court count is a positive integer
+  if (!Number.isInteger(courtCount) || courtCount <= 0) {
+    return {
+      success: false,
+      error: {
+        code: 'INVALID_COURT_COUNT',
+        message: 'Court count must be a positive whole number.',
+        details: {
+          entityCount,
+          courtCount,
+        },
+      },
+    };
+  }
+
+  // Validate court count is divisible by courtsPerPool
+  if (courtCount % config.courtsPerPool !== 0) {
+    return {
+      success: false,
+      error: {
+        code: 'INVALID_COURT_COUNT',
+        message: `Court count must be a multiple of ${config.courtsPerPool} for Partner DUPR.`,
+        details: {
+          entityCount,
+          courtCount,
+        },
+      },
+    };
+  }
+
+  // Calculate pool count and capacity
+  const poolCount = courtCount / config.courtsPerPool;
+  const minRequired = poolCount * config.minPerPool;
+  const maxAllowed = poolCount * config.maxPerPool;
+
+  // Validate entity count against capacity
+  if (entityCount < minRequired) {
+    return {
+      success: false,
+      error: {
+        code: 'TOO_FEW_PLAYERS',
+        message: `With ${courtCount} court(s), you need ${minRequired}-${maxAllowed} players. You have ${entityCount}.`,
+        details: {
+          entityCount,
+          courtCount,
+          minRequired,
+          maxAllowed,
+        },
+      },
+    };
+  }
+
+  if (entityCount > maxAllowed) {
+    return {
+      success: false,
+      error: {
+        code: 'TOO_MANY_PLAYERS',
+        message: `With ${courtCount} court(s), you can have at most ${maxAllowed} players. You have ${entityCount}.`,
+        details: {
+          entityCount,
+          courtCount,
+          minRequired,
+          maxAllowed,
+        },
+      },
+    };
+  }
+
+  return { success: true, pools: [] };
+}
+
+/**
+ * Distribute players into pools based on court count (DUPR Ladder).
+ *
+ * Algorithm:
+ * 1. Validate court count and player count
+ * 2. Sort players by rating (highest first)
+ * 3. Calculate pools from court count (1 court = 1 pool)
+ * 4. Distribute players with Pool A preferring 4 (extra players go to lower pools)
+ *
+ * @param players - Array of players with ratings
+ * @param courtCount - Number of courts available
+ * @param config - Distribution configuration (defaults to DUPR Ladder config)
+ * @returns Distribution result with pools or error
+ */
+export function distributePlayersByCourtCount(
+  players: PlayerWithRating[],
+  courtCount: number,
+  config: CourtDistributionConfig = DEFAULT_LADDER_CONFIG
+): CourtDistributionResult<PlayerPool> {
+  // Validate inputs
+  const validation = validateCourtDistribution(players.length, courtCount, config);
+  if (!validation.success) {
+    return validation;
+  }
+
+  // Sort players by rating (highest first)
+  const sorted = [...players].sort((a, b) => b.rating - a.rating);
+
+  // Calculate pool distribution
+  const poolCount = courtCount / config.courtsPerPool;
+  const baseSize = Math.floor(sorted.length / poolCount);
+  const remainder = sorted.length % poolCount;
+
+  // Distribute players - lower pools (higher index) get extra players first
+  // This ensures Pool A prefers 4 players over 5
+  const pools: PlayerPool[] = [];
+  let playerIndex = 0;
+
+  for (let i = 0; i < poolCount; i++) {
+    const poolName = String.fromCharCode(65 + i); // A, B, C, D...
+    // Extra players go to lower pools (later pools in alphabet)
+    const extraPlayer = i >= poolCount - remainder ? 1 : 0;
+    const poolSize = baseSize + extraPlayer;
+
+    // Assert pool size is within bounds
+    if (poolSize < config.minPerPool || poolSize > config.maxPerPool) {
+      return {
+        success: false,
+        error: {
+          code: 'INVALID_COURT_COUNT',
+          message: `Internal error: pool size ${poolSize} is outside bounds [${config.minPerPool}, ${config.maxPerPool}].`,
+          details: {
+            entityCount: players.length,
+            courtCount,
+            minRequired: config.minPerPool,
+            maxAllowed: config.maxPerPool,
+          },
+        },
+      };
+    }
+
+    const poolPlayers = sorted.slice(playerIndex, playerIndex + poolSize);
+    pools.push({ name: poolName, players: poolPlayers });
+    playerIndex += poolSize;
+  }
+
+  return { success: true, pools };
+}
+
+/**
+ * Distribute teams into pools based on court count (Partner DUPR).
+ *
+ * Algorithm:
+ * 1. Validate court count and team count
+ * 2. Sort teams by team rating (highest first)
+ * 3. Calculate pools from court count (2 courts = 1 pool)
+ * 4. Distribute teams with Pool A preferring 4 (extra teams go to lower pools)
+ *
+ * @param teams - Array of teams with ratings
+ * @param courtCount - Number of courts available
+ * @param config - Distribution configuration (defaults to Partner DUPR config)
+ * @returns Distribution result with pools or error
+ */
+export function distributeTeamsByCourtCount(
+  teams: TeamWithRatings[],
+  courtCount: number,
+  config: CourtDistributionConfig = DEFAULT_PARTNER_CONFIG
+): CourtDistributionResult<TeamPool> {
+  // Validate inputs
+  const validation = validateCourtDistribution(teams.length, courtCount, config);
+  if (!validation.success) {
+    return validation;
+  }
+
+  // Sort teams by rating (highest first)
+  const sorted = [...teams].sort((a, b) => b.teamRating - a.teamRating);
+
+  // Calculate pool distribution
+  const poolCount = courtCount / config.courtsPerPool;
+  const baseSize = Math.floor(sorted.length / poolCount);
+  const remainder = sorted.length % poolCount;
+
+  // Distribute teams - lower pools (higher index) get extra teams first
+  // This ensures Pool A prefers 4 teams over 5
+  const pools: TeamPool[] = [];
+  let teamIndex = 0;
+
+  for (let i = 0; i < poolCount; i++) {
+    const poolName = String.fromCharCode(65 + i); // A, B, C, D...
+    // Extra teams go to lower pools (later pools in alphabet)
+    const extraTeam = i >= poolCount - remainder ? 1 : 0;
+    const poolSize = baseSize + extraTeam;
+
+    // Assert pool size is within bounds
+    if (poolSize < config.minPerPool || poolSize > config.maxPerPool) {
+      return {
+        success: false,
+        error: {
+          code: 'INVALID_COURT_COUNT',
+          message: `Internal error: pool size ${poolSize} is outside bounds [${config.minPerPool}, ${config.maxPerPool}].`,
+          details: {
+            entityCount: teams.length,
+            courtCount,
+            minRequired: config.minPerPool,
+            maxAllowed: config.maxPerPool,
+          },
+        },
+      };
+    }
+
+    const poolTeams = sorted.slice(teamIndex, teamIndex + poolSize);
+    pools.push({ name: poolName, teams: poolTeams });
+    teamIndex += poolSize;
+  }
+
+  return { success: true, pools };
+}
+
+// =============================================================================
+// Pool Distribution (Legacy Functions)
+// =============================================================================
+
+/**
+ * Distribute players into pools based on player count (auto-calculates pools).
+ *
+ * @deprecated Use {@link distributePlayersByCourtCount} instead for court-based distribution.
+ *
  * - Sort by rating (highest first)
  * - Target pool size: 4 (minimizes byes - all players play simultaneously)
  * - Minimum pool size: 4
@@ -133,7 +444,10 @@ export function distributePlayersToPickleBrosPools(players: PlayerWithRating[]):
 }
 
 /**
- * Distribute teams into pools (for Partner DUPR)
+ * Distribute teams into pools based on team count (auto-calculates pools).
+ *
+ * @deprecated Use {@link distributeTeamsByCourtCount} instead for court-based distribution.
+ *
  * - Sort by team rating (highest first)
  * - Target pool size: 4 teams (minimizes byes - 2 courts, all teams play)
  * - Minimum pool size: 4 teams
