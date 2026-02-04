@@ -1,8 +1,14 @@
 import React, { useState, useCallback } from 'react';
-import { View, Text, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, ActivityIndicator } from 'react-native';
 import { useGameStore } from '../stores/gameStore';
 import { useAuthStore } from '../stores/authStore';
-import { GameType, distributeTeamsToPool, distributePlayersToPool } from '@dupr/core';
+import {
+  GameType,
+  distributeTeamsToPool,
+  distributePlayersToPool,
+  distributePlayersByCourtCount,
+  distributeTeamsByCourtCount,
+} from '@dupr/core';
 import { PlayerInputScreen } from './PlayerInputScreen';
 import { GameService } from '../services/gameService';
 import { useNavigation } from '@react-navigation/native';
@@ -39,6 +45,8 @@ export function GameScreen() {
   const isProcessing = useGameStore((state) => state.isProcessing);
   const searchProgress = useGameStore((state) => state.searchProgress);
   const setSearchProgress = useGameStore((state) => state.setSearchProgress);
+  const courtCount = useGameStore((state) => state.courtCount);
+  const setCourtCount = useGameStore((state) => state.setCourtCount);
   const { token } = useAuthStore();
   const [showInput, setShowInput] = useState(false);
 
@@ -50,6 +58,7 @@ export function GameScreen() {
   const handleBack = () => {
     setShowInput(false);
     setError(null);
+    setCourtCount(null);
   };
 
   const handleSubmit = useCallback(async () => {
@@ -62,6 +71,12 @@ export function GameScreen() {
     if (!format) {
       Alert.alert('Error', 'Please select a game format first.');
       setProcessing(false);
+      return;
+    }
+
+    // Validate court count is provided for DUPR Ladder and Partner DUPR
+    if ((format === GameType.DUPR_LADDER || format === GameType.PARTNER_DUPR) && !courtCount) {
+      Alert.alert('Missing Court Count', 'Please enter the number of courts available.');
       return;
     }
 
@@ -81,8 +96,33 @@ export function GameScreen() {
 
       // Store results in gameStore
       console.log('[GameScreen] Setting results...');
-      const pools = result.teams ? undefined : distributePlayersToPool(result.players);
-      const teamPools = result.teams ? distributeTeamsToPool(result.teams) : undefined;
+
+      // Use court-based distribution for DUPR Ladder and Partner DUPR
+      let pools;
+      let teamPools;
+
+      if (format === GameType.DUPR_LADDER && courtCount) {
+        const distributionResult = distributePlayersByCourtCount(result.players, courtCount);
+        if (!distributionResult.success) {
+          Alert.alert('Distribution Error', distributionResult.error.message);
+          setProcessing(false);
+          return;
+        }
+        pools = distributionResult.pools;
+      } else if (format === GameType.PARTNER_DUPR && result.teams && courtCount) {
+        const distributionResult = distributeTeamsByCourtCount(result.teams, courtCount);
+        if (!distributionResult.success) {
+          Alert.alert('Distribution Error', distributionResult.error.message);
+          setProcessing(false);
+          return;
+        }
+        teamPools = distributionResult.pools;
+      } else {
+        // Fallback to legacy distribution (e.g., for other formats)
+        pools = result.teams ? undefined : distributePlayersToPool(result.players);
+        teamPools = result.teams ? distributeTeamsToPool(result.teams) : undefined;
+      }
+
       console.log('[GameScreen] Pools calculated:', pools ? pools.length : 'none');
       console.log('[GameScreen] Team pools calculated:', teamPools ? teamPools.length : 'none');
 
@@ -109,7 +149,7 @@ export function GameScreen() {
       setProcessing(false);
       setSearchProgress(null);
     }
-  }, [token, format, inputText, setResults, setHtml, setProcessing, setError, setSearchProgress, navigation]);
+  }, [token, format, inputText, courtCount, setResults, setHtml, setProcessing, setError, setSearchProgress, navigation]);
 
   // If format is selected and user wants to input players, show PlayerInputScreen
   if (showInput && format) {
@@ -122,6 +162,35 @@ export function GameScreen() {
         >
           <Text style={styles.backButtonText}>← Back to Format Selection</Text>
         </TouchableOpacity>
+
+        {/* Court count input for DUPR Ladder and Partner DUPR */}
+        {(format === GameType.DUPR_LADDER || format === GameType.PARTNER_DUPR) && (
+          <View style={styles.courtInputContainer}>
+            <Text style={styles.courtInputLabel}>
+              Number of Courts *
+              {format === GameType.PARTNER_DUPR && (
+                <Text style={styles.courtInputHint}> (must be even)</Text>
+              )}
+            </Text>
+            <TextInput
+              style={styles.courtInput}
+              keyboardType="numeric"
+              placeholder={format === GameType.PARTNER_DUPR ? 'e.g., 2, 4, 6' : 'e.g., 1, 2, 3'}
+              value={courtCount?.toString() ?? ''}
+              onChangeText={(text) => {
+                const parsed = parseInt(text, 10);
+                setCourtCount(isNaN(parsed) ? null : parsed);
+              }}
+              editable={!isProcessing}
+            />
+            <Text style={styles.courtInputDescription}>
+              {format === GameType.DUPR_LADDER
+                ? 'Each court = 1 pool (4-5 players per pool)'
+                : 'Every 2 courts = 1 pool (4-5 teams per pool)'}
+            </Text>
+          </View>
+        )}
+
         <PlayerInputScreen onSubmit={handleSubmit} />
 
         {/* Loading overlay */}
@@ -405,5 +474,40 @@ const styles = StyleSheet.create({
   },
   statusTextDefault: {
     color: '#E65100',
+  },
+  courtInputContainer: {
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  courtInputLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 8,
+  },
+  courtInputHint: {
+    fontSize: 14,
+    fontWeight: '400',
+    color: '#666',
+  },
+  courtInput: {
+    backgroundColor: '#f5f5f5',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 18,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    textAlign: 'center',
+    fontWeight: '600',
+  },
+  courtInputDescription: {
+    fontSize: 13,
+    color: '#666',
+    marginTop: 8,
+    textAlign: 'center',
   },
 });
