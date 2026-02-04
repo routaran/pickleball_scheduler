@@ -57,6 +57,7 @@ interface GameState {
   isProcessing: boolean;
   error: string | null;
   searchProgress: SearchProgress | null;
+  courtCount: number | null;  // Number of courts available for DUPR Ladder/Partner DUPR
 
   // Rating override state
   ratingOverrides: Record<string, number>;  // playerName -> customRating
@@ -73,6 +74,7 @@ interface GameState {
   setSearchProgress(progress: SearchProgress | null): void;
   addSearchResult(entry: SearchProgressEntry): void;
   updateSearchCurrent(current: number, currentName: string): void;
+  setCourtCount(count: number | null): void;
   reset(): void;
 
   // Rating override actions
@@ -91,6 +93,7 @@ export const useGameStore = create<GameState>((set, get) => ({
   isProcessing: false,
   error: null,
   searchProgress: null,
+  courtCount: null,
   ratingOverrides: {},
   editingPlayer: null,
 
@@ -122,6 +125,7 @@ export const useGameStore = create<GameState>((set, get) => ({
       },
     };
   }),
+  setCourtCount: (courtCount) => set({ courtCount }),
   reset: () => set({
     format: null,
     inputText: '',
@@ -132,6 +136,7 @@ export const useGameStore = create<GameState>((set, get) => ({
     isProcessing: false,
     error: null,
     searchProgress: null,
+    courtCount: null,
     ratingOverrides: {},
     editingPlayer: null,
   }),
