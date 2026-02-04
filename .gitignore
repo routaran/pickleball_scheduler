@@ -72,3 +72,4 @@ android-sdk-root/
 .knownPackages
 error.txt
 *.png
+*.apk
