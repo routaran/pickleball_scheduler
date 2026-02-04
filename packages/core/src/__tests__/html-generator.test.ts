@@ -6,6 +6,7 @@
 import {
   distributePlayersToPool,
   distributePlayersToPickleBrosPools,
+  distributeTeamsToPool,
   generateDuprLadderHtml,
   generatePartnerDuprHtml,
   generatePickleBrosMondayHtml,
@@ -13,11 +14,24 @@ import {
   PlayerWithRating,
   TeamWithRatings,
   PlayerPool,
+  TeamPool,
   POOL_TARGET_SIZE,
   POOL_MIN_SIZE,
+  POOL_MAX_SIZE,
   PICKLEBROS_POOL_SIZE,
   RATING_TIER_HIGH,
   RATING_TIER_MID,
+  COURTS_PER_POOL_LADDER,
+  COURTS_PER_POOL_PARTNER,
+  DEFAULT_LADDER_CONFIG,
+  DEFAULT_PARTNER_CONFIG,
+  CourtDistributionConfig,
+  CourtDistributionResult,
+  CourtDistributionErrorCode,
+  getPoolCount,
+  validateCourtDistribution,
+  distributePlayersByCourtCount,
+  distributeTeamsByCourtCount,
 } from '../html-generator';
 
 describe('html-generator', () => {
@@ -60,12 +74,16 @@ describe('html-generator', () => {
   // =============================================================================
 
   describe('constants', () => {
-    it('should export POOL_TARGET_SIZE as 5', () => {
-      expect(POOL_TARGET_SIZE).toBe(5);
+    it('should export POOL_TARGET_SIZE as 4', () => {
+      expect(POOL_TARGET_SIZE).toBe(4);
     });
 
     it('should export POOL_MIN_SIZE as 4', () => {
       expect(POOL_MIN_SIZE).toBe(4);
+    });
+
+    it('should export POOL_MAX_SIZE as 5', () => {
+      expect(POOL_MAX_SIZE).toBe(5);
     });
 
     it('should export PICKLEBROS_POOL_SIZE as 4', () => {
@@ -78,6 +96,30 @@ describe('html-generator', () => {
 
     it('should export RATING_TIER_MID as 3.0', () => {
       expect(RATING_TIER_MID).toBe(3.0);
+    });
+
+    it('should export COURTS_PER_POOL_LADDER as 1', () => {
+      expect(COURTS_PER_POOL_LADDER).toBe(1);
+    });
+
+    it('should export COURTS_PER_POOL_PARTNER as 2', () => {
+      expect(COURTS_PER_POOL_PARTNER).toBe(2);
+    });
+
+    it('should export DEFAULT_LADDER_CONFIG with correct values', () => {
+      expect(DEFAULT_LADDER_CONFIG).toEqual({
+        minPerPool: 4,
+        maxPerPool: 5,
+        courtsPerPool: 1,
+      });
+    });
+
+    it('should export DEFAULT_PARTNER_CONFIG with correct values', () => {
+      expect(DEFAULT_PARTNER_CONFIG).toEqual({
+        minPerPool: 4,
+        maxPerPool: 5,
+        courtsPerPool: 2,
+      });
     });
   });
 
@@ -322,6 +364,499 @@ describe('html-generator', () => {
       expect(pools[0].players.map((p) => p.rating)).toEqual([4.5, 4.3, 4.1, 3.9]);
       // Pool B should have next 4
       expect(pools[1].players.map((p) => p.rating)).toEqual([3.7, 3.5, 3.3, 3.1]);
+    });
+  });
+
+  // =============================================================================
+  // Court-Based Distribution Tests
+  // =============================================================================
+
+  describe('getPoolCount', () => {
+    it('should return correct pool count for valid inputs', () => {
+      expect(getPoolCount(2, 1)).toBe(2);
+      expect(getPoolCount(4, 2)).toBe(2);
+      expect(getPoolCount(6, 2)).toBe(3);
+      expect(getPoolCount(10, 1)).toBe(10);
+    });
+
+    it('should throw error for non-positive court count', () => {
+      expect(() => getPoolCount(0, 1)).toThrow('Court count must be a positive whole number');
+      expect(() => getPoolCount(-2, 1)).toThrow('Court count must be a positive whole number');
+    });
+
+    it('should throw error for non-integer court count', () => {
+      expect(() => getPoolCount(2.5, 1)).toThrow('Court count must be a positive whole number');
+      expect(() => getPoolCount(3.7, 2)).toThrow('Court count must be a positive whole number');
+    });
+
+    it('should throw error when court count is not divisible by courtsPerPool', () => {
+      expect(() => getPoolCount(3, 2)).toThrow('Court count must be a multiple of 2');
+      expect(() => getPoolCount(5, 2)).toThrow('Court count must be a multiple of 2');
+    });
+  });
+
+  describe('validateCourtDistribution', () => {
+    it('should return success for valid inputs', () => {
+      const result = validateCourtDistribution(8, 2, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(true);
+    });
+
+    it('should return INVALID_COURT_COUNT for zero courts', () => {
+      const result = validateCourtDistribution(8, 0, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        expect(result.error.message).toContain('positive whole number');
+      }
+    });
+
+    it('should return INVALID_COURT_COUNT for negative courts', () => {
+      const result = validateCourtDistribution(8, -2, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INVALID_COURT_COUNT');
+      }
+    });
+
+    it('should return INVALID_COURT_COUNT for fractional courts', () => {
+      const result = validateCourtDistribution(8, 2.5, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INVALID_COURT_COUNT');
+      }
+    });
+
+    it('should return INVALID_COURT_COUNT for odd courts in Partner DUPR', () => {
+      const result = validateCourtDistribution(8, 3, DEFAULT_PARTNER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        expect(result.error.message).toContain('multiple of 2');
+      }
+    });
+
+    it('should return TOO_FEW_PLAYERS when under minimum', () => {
+      const result = validateCourtDistribution(3, 2, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('TOO_FEW_PLAYERS');
+        expect(result.error.details.minRequired).toBe(8);
+        expect(result.error.details.maxAllowed).toBe(10);
+        expect(result.error.message).toContain('8-10 players');
+        expect(result.error.message).toContain('You have 3');
+      }
+    });
+
+    it('should return TOO_MANY_PLAYERS when over maximum', () => {
+      const result = validateCourtDistribution(12, 2, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('TOO_MANY_PLAYERS');
+        expect(result.error.details.maxAllowed).toBe(10);
+        expect(result.error.message).toContain('at most 10 players');
+        expect(result.error.message).toContain('You have 12');
+      }
+    });
+
+    it('should return TOO_FEW_PLAYERS for empty players array', () => {
+      const result = validateCourtDistribution(0, 2, DEFAULT_LADDER_CONFIG);
+      expect(result.success).toBe(false);
+      if (!result.success) {
+        expect(result.error.code).toBe('TOO_FEW_PLAYERS');
+      }
+    });
+  });
+
+  describe('distributePlayersByCourtCount', () => {
+    describe('success cases', () => {
+      it('should distribute 8 players / 2 courts into 2 pools of 4 each', () => {
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          expect(result.pools[0].players).toHaveLength(4);
+          expect(result.pools[1].players).toHaveLength(4);
+          expect(result.pools[0].name).toBe('A');
+          expect(result.pools[1].name).toBe('B');
+        }
+      });
+
+      it('should distribute 9 players / 2 courts with Pool A=4, Pool B=5', () => {
+        const players9 = players10.slice(0, 9);
+        const result = distributePlayersByCourtCount(players9, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          // Pool A prefers 4 players
+          expect(result.pools[0].players).toHaveLength(4);
+          // Pool B gets the extra player
+          expect(result.pools[1].players).toHaveLength(5);
+        }
+      });
+
+      it('should distribute 10 players / 2 courts into 2 pools of 5 each', () => {
+        const result = distributePlayersByCourtCount(players10, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          expect(result.pools[0].players).toHaveLength(5);
+          expect(result.pools[1].players).toHaveLength(5);
+        }
+      });
+
+      it('should distribute 16 players / 4 courts into 4 pools of 4 each', () => {
+        const players16 = Array.from({ length: 16 }, (_, i) =>
+          createPlayer(`Player ${i + 1}`, 4.0 - i * 0.1)
+        );
+        const result = distributePlayersByCourtCount(players16, 4);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(4);
+          result.pools.forEach((pool) => {
+            expect(pool.players).toHaveLength(4);
+          });
+        }
+      });
+
+      it('should distribute 40 players / 10 courts into 10 pools of 4 each', () => {
+        const players40 = Array.from({ length: 40 }, (_, i) =>
+          createPlayer(`Player ${i + 1}`, 5.0 - i * 0.1)
+        );
+        const result = distributePlayersByCourtCount(players40, 10);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(10);
+          result.pools.forEach((pool) => {
+            expect(pool.players).toHaveLength(4);
+          });
+        }
+      });
+
+      it('should sort players by rating (highest first)', () => {
+        const shuffled = [
+          createPlayer('Low', 2.5),
+          createPlayer('High', 4.5),
+          createPlayer('Mid', 3.5),
+          createPlayer('MidHigh', 4.0),
+        ];
+        const result = distributePlayersByCourtCount(shuffled, 1);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools[0].players[0].rating).toBe(4.5);
+          expect(result.pools[0].players[1].rating).toBe(4.0);
+          expect(result.pools[0].players[2].rating).toBe(3.5);
+          expect(result.pools[0].players[3].rating).toBe(2.5);
+        }
+      });
+
+      it('should put top rated players in Pool A', () => {
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          // Pool A should have top 4 rated players
+          expect(result.pools[0].players.map((p) => p.rating)).toEqual([4.5, 4.3, 4.1, 3.9]);
+          // Pool B should have lower rated players
+          expect(result.pools[1].players.map((p) => p.rating)).toEqual([3.7, 3.5, 3.3, 3.1]);
+        }
+      });
+    });
+
+    describe('error cases', () => {
+      it('should return TOO_FEW_PLAYERS for 3 players / 2 courts', () => {
+        const players3 = players10.slice(0, 3);
+        const result = distributePlayersByCourtCount(players3, 2);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('TOO_FEW_PLAYERS');
+        }
+      });
+
+      it('should return TOO_MANY_PLAYERS for 12 players / 2 courts', () => {
+        const players12 = Array.from({ length: 12 }, (_, i) =>
+          createPlayer(`Player ${i + 1}`, 4.0 - i * 0.1)
+        );
+        const result = distributePlayersByCourtCount(players12, 2);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('TOO_MANY_PLAYERS');
+        }
+      });
+
+      it('should return INVALID_COURT_COUNT for 0 courts', () => {
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, 0);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        }
+      });
+
+      it('should return INVALID_COURT_COUNT for negative court count', () => {
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, -2);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        }
+      });
+
+      it('should return INVALID_COURT_COUNT for fractional court count', () => {
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, 2.5);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        }
+      });
+
+      it('should return TOO_FEW_PLAYERS for empty players array', () => {
+        const result = distributePlayersByCourtCount([], 2);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('TOO_FEW_PLAYERS');
+        }
+      });
+    });
+
+    describe('edge cases', () => {
+      it('should succeed at exactly minimum (8 players / 2 courts)', () => {
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          expect(result.pools[0].players).toHaveLength(4);
+          expect(result.pools[1].players).toHaveLength(4);
+        }
+      });
+
+      it('should succeed at exactly maximum (10 players / 2 courts)', () => {
+        const result = distributePlayersByCourtCount(players10, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          expect(result.pools[0].players).toHaveLength(5);
+          expect(result.pools[1].players).toHaveLength(5);
+        }
+      });
+
+      it('should handle remainder = 0 case equally', () => {
+        // 8 players / 2 courts → baseSize=4, remainder=0 → both pools get 4
+        const players8 = players10.slice(0, 8);
+        const result = distributePlayersByCourtCount(players8, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools[0].players).toHaveLength(4);
+          expect(result.pools[1].players).toHaveLength(4);
+        }
+      });
+    });
+  });
+
+  describe('distributeTeamsByCourtCount', () => {
+    // Helper to create test teams
+    const createTestTeam = (
+      name1: string,
+      rating1: number,
+      name2: string,
+      rating2: number
+    ): TeamWithRatings => {
+      return createTeamWithRatings(createPlayer(name1, rating1), createPlayer(name2, rating2));
+    };
+
+    describe('success cases', () => {
+      it('should distribute 8 teams / 4 courts into 2 pools of 4 each', () => {
+        const teams8 = Array.from({ length: 8 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0 - i * 0.1, `P${i * 2 + 2}`, 3.5 - i * 0.1)
+        );
+        const result = distributeTeamsByCourtCount(teams8, 4);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          expect(result.pools[0].teams).toHaveLength(4);
+          expect(result.pools[1].teams).toHaveLength(4);
+        }
+      });
+
+      it('should distribute 5 teams / 2 courts into 1 pool of 5', () => {
+        const teams5 = Array.from({ length: 5 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0 - i * 0.1, `P${i * 2 + 2}`, 3.5 - i * 0.1)
+        );
+        const result = distributeTeamsByCourtCount(teams5, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(1);
+          expect(result.pools[0].teams).toHaveLength(5);
+        }
+      });
+
+      it('should distribute 9 teams / 4 courts with Pool A=4, Pool B=5', () => {
+        const teams9 = Array.from({ length: 9 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0 - i * 0.1, `P${i * 2 + 2}`, 3.5 - i * 0.1)
+        );
+        const result = distributeTeamsByCourtCount(teams9, 4);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(2);
+          // Pool A prefers 4 teams
+          expect(result.pools[0].teams).toHaveLength(4);
+          // Pool B gets the extra team
+          expect(result.pools[1].teams).toHaveLength(5);
+        }
+      });
+
+      it('should distribute 15 teams / 6 courts into 3 pools of 5', () => {
+        const teams15 = Array.from({ length: 15 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0 - i * 0.05, `P${i * 2 + 2}`, 3.5 - i * 0.05)
+        );
+        const result = distributeTeamsByCourtCount(teams15, 6);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(3);
+          result.pools.forEach((pool) => {
+            expect(pool.teams).toHaveLength(5);
+          });
+        }
+      });
+
+      it('should distribute 18 teams / 8 courts with Pool A=4, B=4, C=5, D=5', () => {
+        const teams18 = Array.from({ length: 18 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0 - i * 0.05, `P${i * 2 + 2}`, 3.5 - i * 0.05)
+        );
+        const result = distributeTeamsByCourtCount(teams18, 8);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          expect(result.pools).toHaveLength(4);
+          // baseSize = 4, remainder = 2 → Pool A and B get 4, Pool C and D get 5
+          expect(result.pools[0].teams).toHaveLength(4);
+          expect(result.pools[1].teams).toHaveLength(4);
+          expect(result.pools[2].teams).toHaveLength(5);
+          expect(result.pools[3].teams).toHaveLength(5);
+        }
+      });
+
+      it('should sort teams by team rating (highest first)', () => {
+        const teams = [
+          createTestTeam('Low1', 2.5, 'Low2', 2.5),    // teamRating ~2.5
+          createTestTeam('High1', 4.5, 'High2', 4.5),  // teamRating ~4.5
+          createTestTeam('Mid1', 3.5, 'Mid2', 3.5),    // teamRating ~3.5
+          createTestTeam('MidH1', 4.0, 'MidH2', 4.0),  // teamRating ~4.0
+        ];
+        const result = distributeTeamsByCourtCount(teams, 2);
+
+        expect(result.success).toBe(true);
+        if (result.success) {
+          // Should be sorted by team rating descending
+          expect(result.pools[0].teams[0].teamRating).toBeGreaterThan(result.pools[0].teams[1].teamRating);
+        }
+      });
+    });
+
+    describe('error cases', () => {
+      it('should return INVALID_COURT_COUNT for 1 court (Partner DUPR needs 2)', () => {
+        const teams4 = Array.from({ length: 4 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0, `P${i * 2 + 2}`, 3.5)
+        );
+        const result = distributeTeamsByCourtCount(teams4, 1);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+          expect(result.error.message).toContain('multiple of 2');
+        }
+      });
+
+      it('should return INVALID_COURT_COUNT for odd court count (3 courts)', () => {
+        const teams4 = Array.from({ length: 4 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0, `P${i * 2 + 2}`, 3.5)
+        );
+        const result = distributeTeamsByCourtCount(teams4, 3);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        }
+      });
+
+      it('should return TOO_FEW_PLAYERS for 3 teams / 4 courts', () => {
+        const teams3 = Array.from({ length: 3 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0, `P${i * 2 + 2}`, 3.5)
+        );
+        const result = distributeTeamsByCourtCount(teams3, 4);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('TOO_FEW_PLAYERS');
+        }
+      });
+
+      it('should return TOO_MANY_PLAYERS for 12 teams / 4 courts', () => {
+        const teams12 = Array.from({ length: 12 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0, `P${i * 2 + 2}`, 3.5)
+        );
+        const result = distributeTeamsByCourtCount(teams12, 4);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('TOO_MANY_PLAYERS');
+        }
+      });
+
+      it('should return INVALID_COURT_COUNT for 0 courts', () => {
+        const teams4 = Array.from({ length: 4 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0, `P${i * 2 + 2}`, 3.5)
+        );
+        const result = distributeTeamsByCourtCount(teams4, 0);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        }
+      });
+
+      it('should return INVALID_COURT_COUNT for negative court count', () => {
+        const teams4 = Array.from({ length: 4 }, (_, i) =>
+          createTestTeam(`P${i * 2 + 1}`, 4.0, `P${i * 2 + 2}`, 3.5)
+        );
+        const result = distributeTeamsByCourtCount(teams4, -2);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('INVALID_COURT_COUNT');
+        }
+      });
+
+      it('should return TOO_FEW_PLAYERS for empty teams array', () => {
+        const result = distributeTeamsByCourtCount([], 2);
+
+        expect(result.success).toBe(false);
+        if (!result.success) {
+          expect(result.error.code).toBe('TOO_FEW_PLAYERS');
+        }
+      });
     });
   });
 
