@@ -73,3 +73,11 @@ android-sdk-root/
 error.txt
 *.png
 *.apk
+
+# Planning/review artifacts
+*_SUMMARY.md
+*_REPORT.md
+*_PACKET.md
+*_PROMPT.md
+*_IMPLEMENTATION.md
+steps.txt
